@@ -72,5 +72,4 @@ export interface DoctorPatient {
     avatarUrl: string;
     conditions: string[];
     lastInteraction: string;
-    status: 'Active' | 'Inactive' | 'New';
 }
