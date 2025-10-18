@@ -29,8 +29,27 @@ const mockMessages = {
 };
 
 type Messages = typeof mockMessages;
+type Message = { id: string; from: string; text: string; time: string };
 
-function ChatView({ patient, messages }: { patient: DoctorPatient; messages: Messages['p001'] }) {
+function ChatView({ patient, messages: initialMessages }: { patient: DoctorPatient; messages: Message[] }) {
+    const [messages, setMessages] = useState<Message[]>(initialMessages);
+    const [newMessage, setNewMessage] = useState('');
+
+    const handleSendMessage = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newMessage.trim() === '') return;
+
+        const messageToSend: Message = {
+            id: `msg-${Date.now()}`,
+            from: 'doctor',
+            text: newMessage,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        setMessages(prev => [...prev, messageToSend]);
+        setNewMessage('');
+    }
+
     return (
         <Card className="h-full flex flex-col shadow-lg">
             <div className="p-4 border-b flex items-center gap-4">
@@ -60,12 +79,17 @@ function ChatView({ patient, messages }: { patient: DoctorPatient; messages: Mes
                 </div>
             </ScrollArea>
             <Separator />
-            <div className="p-4 bg-gray-50">
+            <form onSubmit={handleSendMessage} className="p-4 bg-gray-50">
                 <div className="flex items-center gap-2">
-                    <Input placeholder="Type a message..." className="flex-1" />
-                    <Button><Send className="w-4 h-4" /></Button>
+                    <Input 
+                        placeholder="Type a message..." 
+                        className="flex-1"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                    />
+                    <Button type="submit"><Send className="w-4 h-4" /></Button>
                 </div>
-            </div>
+            </form>
         </Card>
     );
 }
