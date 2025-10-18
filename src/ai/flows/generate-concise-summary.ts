@@ -33,14 +33,6 @@ const GenerateConciseSummaryInputSchema = z.object({
           status: z.string(),
         })
       ),
-      vitals: z
-        .object({
-          bp: z.string(),
-          pulse: z.string(),
-          temp: z.string(),
-          weight: z.string().optional(),
-        })
-        .optional(),
     }),
     summary: z.string().optional(),
     rawDocument: z.string().optional(),
@@ -63,7 +55,7 @@ const prompt = ai.definePrompt({
   name: 'generateConciseSummaryPrompt',
   input: {schema: GenerateConciseSummaryInputSchema},
   output: {schema: GenerateConciseSummaryOutputSchema},
-  prompt: `You are an expert medical summarizer. Please summarize the following medical record concisely and accurately.\n\nRecord Type: {{{record.type}}}\nDate: {{{record.date}}}\n\nDiagnoses: {{#each record.extractedData.diagnosis}} - {{{this}}}{{/each}}\n\nMedications: {{#each record.extractedData.medications}} - {{{this.name}}} ({{{this.dosage}}}, {{{this.frequency}}}){{/each}}\n\nLab Results: {{#each record.extractedData.labResults}} - {{{this.test}}}: {{{this.value}}} (Range: {{{this.range}}}, Status: {{{this.status}}}){{/each}}\n\nVitals: {{#if record.extractedData.vitals}}BP: {{{record.extractedData.vitals.bp}}}, Pulse: {{{record.extractedData.vitals.pulse}}}, Temp: {{{record.extractedData.vitals.temp}}}, Weight: {{{record.extractedData.vitals.weight}}}{{/if}}\n\nSummary: {{{record.summary}}}\n\nRaw Document: {{{record.rawDocument}}}`,
+  prompt: `You are an expert medical summarizer. Please summarize the following medical record concisely and accurately in 2-3 sentences. Focus on the key diagnoses and findings.\n\nRecord Type: {{{record.type}}}\nDate: {{{record.date}}}\n\nDiagnoses: {{#each record.extractedData.diagnosis}} - {{{this}}}{{/each}}\n\nMedications: {{#each record.extractedData.medications}} - {{{this.name}}} ({{{this.dosage}}}, {{{this.frequency}}}){{/each}}\n\nLab Results: {{#each record.extractedData.labResults}} - {{{this.test}}}: {{{this.value}}} (Range: {{{this.range}}}, Status: {{{this.status}}}){{/each}}`,
 });
 
 const generateConciseSummaryFlow = ai.defineFlow(

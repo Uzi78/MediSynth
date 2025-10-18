@@ -7,7 +7,9 @@ import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import type { Record as RecordType } from '@/lib/types';
 import RecordDisplay from './record-display';
-import { mockPatients } from '@/lib/data';
+import { extractMedicalData, ExtractMedicalDataOutput } from '@/ai/flows/extract-medical-data';
+import { generateConciseSummary } from '@/ai/flows/generate-concise-summary';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadedFile {
   id: string;
@@ -17,57 +19,104 @@ interface UploadedFile {
 }
 
 const pipelineStages = [
-    { progress: 20, status: 'OCR in progress...', stageIndex: 1 },
-    { progress: 40, status: 'Extracting data...', stageIndex: 2 },
-    { progress: 60, status: 'Generating summary...', stageIndex: 3 },
-    { progress: 80, status: 'Organizing...', stageIndex: 4 },
-    { progress: 100, status: 'Completed', stageIndex: 4 },
+    { progress: 0, status: 'Uploading...', stageIndex: 0 },
+    { progress: 25, status: 'Extracting data...', stageIndex: 1 },
+    { progress: 65, status: 'Generating summary...', stageIndex: 2 },
+    { progress: 100, status: 'Completed', stageIndex: 3 },
 ];
 
 interface PatientPortalProps {
   setPipelineStage: Dispatch<SetStateAction<number>>;
 }
 
+const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 export default function PatientPortal({ setPipelineStage }: PatientPortalProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [processedRecord, setProcessedRecord] = useState<RecordType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
-  const processFiles = (files: FileList) => {
-    setProcessedRecord(null); // Clear previous results
-    const newFiles: UploadedFile[] = Array.from(files).map(file => ({
+  const updateProgress = (stageIndex: number) => {
+    const stage = pipelineStages[stageIndex];
+    setUploadedFile(currentFile => 
+        currentFile ? { ...currentFile, progress: stage.progress, status: stage.status } : null
+    );
+    setPipelineStage(stage.stageIndex);
+  };
+
+  const processFile = async (file: File) => {
+    setIsProcessing(true);
+    setProcessedRecord(null);
+    const newFile = {
       id: crypto.randomUUID(),
       name: file.name,
       progress: 0,
-      status: 'Uploading...',
-    }));
-    setUploadedFiles(newFiles);
-    setPipelineStage(0);
+      status: 'Queued...',
+    };
+    setUploadedFile(newFile);
+    updateProgress(0);
 
-    let stageIndex = 0;
-    const interval = setInterval(() => {
-        const stage = pipelineStages[stageIndex];
-        setUploadedFiles(currentFiles => 
-            currentFiles.map(file => 
-                file.progress < 100 ? { ...file, progress: stage.progress, status: stage.status } : file
-            )
-        );
-        setPipelineStage(stage.stageIndex);
-
-        stageIndex++;
-        if (stageIndex >= pipelineStages.length) {
-            clearInterval(interval);
-            // Simulate showing a processed record after completion
-            // We'll use the first record from the mock data as an example result
-            setProcessedRecord(mockPatients[0].records[0]);
+    try {
+      const documentText = await readFileAsDataURL(file);
+      
+      // Stage 1: Extraction
+      updateProgress(1);
+      const extractedData: ExtractMedicalDataOutput = await extractMedicalData({ documentText });
+      
+      // Stage 2: Summarization
+      updateProgress(2);
+      const tempRecordForSummary = {
+        id: newFile.id,
+        date: new Date().toISOString(),
+        type: 'Uploaded Document',
+        status: 'processing' as const,
+        rawDocument: '', // Not needed for summary generation
+        extractedData: {
+            diagnosis: extractedData.diagnosis,
+            medications: extractedData.medications,
+            labResults: extractedData.labResults,
         }
-    }, 1500);
+      };
+
+      const { summary } = await generateConciseSummary({ record: tempRecordForSummary });
+
+      // Stage 3: Completion
+      updateProgress(3);
+      const finalRecord: RecordType = {
+        ...tempRecordForSummary,
+        status: 'completed',
+        summary: summary,
+        rawDocument: "Raw document text would be stored here in a real scenario, but we'll display the extracted data.",
+      };
+      setProcessedRecord(finalRecord);
+
+    } catch (error) {
+      console.error("Error processing file:", error);
+      toast({
+        variant: "destructive",
+        title: "Processing Failed",
+        description: "There was an error processing your document. Please try again.",
+      });
+      setUploadedFile(null);
+      setPipelineStage(-1);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      processFiles(e.target.files);
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
     }
   };
 
@@ -75,14 +124,15 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files) {
-      processFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleDragEvents = (e: DragEvent<HTMLDivElement>, isEntering: boolean) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isProcessing) return;
     setIsDragging(isEntering);
   };
 
@@ -91,7 +141,8 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
       <div
         className={cn(
           'relative border-2 border-dashed rounded-lg p-12 text-center transition-colors duration-300',
-          isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
+          isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50',
+          isProcessing && 'cursor-not-allowed opacity-60'
         )}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
@@ -100,42 +151,40 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
       >
         <div className="flex flex-col items-center justify-center space-y-4">
           <Upload className="w-12 h-12 text-gray-400" />
-          <h3 className="text-xl font-semibold">Upload Medical Records</h3>
-          <p className="text-gray-500">PDF, Images (JPG, PNG) or scanned documents</p>
-          <Button onClick={() => fileInputRef.current?.click()}>Select Files</Button>
+          <h3 className="text-xl font-semibold">Upload Medical Record</h3>
+          <p className="text-gray-500">Drop a single PDF or Image file here</p>
+          <Button onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>Select File</Button>
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
-            multiple
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileChange}
+            disabled={isProcessing}
           />
         </div>
       </div>
 
-      {uploadedFiles.length > 0 && !processedRecord && (
+      {uploadedFile && !processedRecord && (
         <div className="space-y-4">
           <h3 className="font-semibold text-lg">Processing Status</h3>
-          {uploadedFiles.map(file => (
-            <div key={file.id} className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
+          <div key={uploadedFile.id} className="p-4 border rounded-lg bg-white shadow-sm space-y-3">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <FileText className="w-6 h-6 text-primary flex-shrink-0" />
-                  <p className="font-medium truncate">{file.name}</p>
+                  <p className="font-medium truncate">{uploadedFile.name}</p>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-600 flex-shrink-0">
-                  <span>{file.status}</span>
-                  {file.progress < 100 ? (
+                  <span>{uploadedFile.status}</span>
+                  {uploadedFile.progress < 100 ? (
                     <Loader className="w-4 h-4 animate-spin" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4 text-green-600" />
                   )}
                 </div>
               </div>
-              <Progress value={file.progress} />
+              <Progress value={uploadedFile.progress} />
             </div>
-          ))}
         </div>
       )}
 

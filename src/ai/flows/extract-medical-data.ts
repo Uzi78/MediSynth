@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview This flow extracts structured medical data from a document using an LLM.
+ * @fileOverview This flow extracts structured medical data from a document image or PDF.
  *
  * - extractMedicalData - A function that takes a document and extracts medical information.
  * - ExtractMedicalDataInput - The input type for the extractMedicalData function.
@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ExtractMedicalDataInputSchema = z.object({
-  documentText: z.string().describe('The text content of the medical document to extract data from.'),
+  documentText: z.string().describe("A medical document (e.g., lab report, prescription) as a data URI. It must include a MIME type (e.g., 'data:image/png;base64,...' or 'data:application/pdf;base64,...')."),
 });
 export type ExtractMedicalDataInput = z.infer<typeof ExtractMedicalDataInputSchema>;
 
@@ -33,7 +33,6 @@ const ExtractMedicalDataOutputSchema = z.object({
       status: z.string().describe('The status of the lab test (High, Normal, Low).'),
     })
   ).describe('A list of lab results extracted from the document.'),
-  clinicalSummary: z.string().describe('A concise summary of the clinical information in the document.'),
 });
 export type ExtractMedicalDataOutput = z.infer<typeof ExtractMedicalDataOutputSchema>;
 
@@ -45,21 +44,21 @@ const extractMedicalDataPrompt = ai.definePrompt({
   name: 'extractMedicalDataPrompt',
   input: {schema: ExtractMedicalDataInputSchema},
   output: {schema: ExtractMedicalDataOutputSchema},
-  prompt: `You are an AI assistant that extracts structured medical data from a document.
+  prompt: `You are an AI assistant that performs OCR and extracts structured medical data from a document.
 
-  Analyze the following medical document text and extract the following information:
+  Analyze the following medical document and extract the following information:
   - Diagnoses
   - Medications (name, dosage, frequency)
   - Lab Results (test, value, range, status)
-  - Clinical Summary
 
-  Document Text: {{{documentText}}}
+  Document: {{media url=documentText}}
 
-  Return the extracted information in JSON format.  The JSON should have the following keys:
-  - diagnoses: A list of diagnoses.
+  Return the extracted information in JSON format. The JSON should have the following keys:
+  - diagnosis: A list of diagnoses.
   - medications: A list of medications, where each medication has a name, dosage, and frequency.
   - labResults: A list of lab results, where each result has a test, value, range, and status.
-  - clinicalSummary: A concise summary of the clinical information in the document.
+  
+  If a field is not present in the document, return an empty array or object for it. Do not hallucinate data.
   Follow the schema descriptions for each of the fields.
   `,
 });
