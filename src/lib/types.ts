@@ -40,5 +40,4 @@ export interface Patient {
   age: number;
   gender: 'M' | 'F' | 'Other';
   email: string;
-  records: Record[];
 }

@@ -1,5 +1,18 @@
 {
   "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "type": "object",
+      "description": "Represents a user's profile information.",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["patient", "doctor"],
+          "description": "The role of the user."
+        }
+      },
+      "required": ["role"]
+    },
     "Patient": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Patient",
@@ -92,6 +105,22 @@
   "firestore": {
     "structure": [
       {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information, including their role.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
+      },
+      {
         "path": "/users/{userId}/patients/{patientId}",
         "definition": {
           "entityName": "Patient",
@@ -136,6 +165,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. It leverages path-based ownership for patient data, ensuring that access control is straightforward and efficient. All documents within a collection share the same security requirements, simplifying security rules. The design uses denormalization to avoid `get()` calls in security rules. Specifically, patient information, while stored separately for general access, is duplicated into the records subcollection to maintain data locality for streamlined operations. This duplication helps maintain authorization independence and simplifies debugging. This enables secure `list` operations using path-based ownership."
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. A top-level 'users' collection stores role information. Patient data is nested under the user who owns it, ensuring that access control is straightforward and efficient. All documents within a collection share the same security requirements, simplifying security rules. The design uses denormalization to avoid `get()` calls in security rules. This enables secure `list` operations using path-based ownership."
   }
 }
