@@ -73,3 +73,15 @@ export interface DoctorPatient {
     conditions: string[];
     lastInteraction: string;
 }
+
+export interface Prescription {
+  medications: {
+    drug: string;
+    strength: string;
+    form: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+  }[];
+  instructions: string;
+}
