@@ -13,6 +13,7 @@ import MyPatientsView from '@/components/views/my-patients-view';
 import ConsultationsView from '@/components/views/consultations-view';
 import WritePrescriptionView from '@/components/views/write-prescription-view';
 import DoctorProfileView from '@/components/views/doctor-profile-view';
+import MessagePatientView from '@/components/views/message-patient-view';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
@@ -90,6 +91,8 @@ export default function DashboardPage() {
           return <ConsultationsView />;
         case 'prescription':
           return <WritePrescriptionView />;
+        case 'messages':
+            return <MessagePatientView />;
         case 'profile':
             return <DoctorProfileView />;
         default:
