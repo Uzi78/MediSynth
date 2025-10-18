@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { useState, ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -16,9 +17,11 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "./ui/card"
-import { useUser } from "@/firebase";
+import { useUser, useFirebase } from "@/firebase";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Camera } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { updateUserProfile } from "@/firebase/firestore/users";
 
 const profileFormSchema = z.object({
   name: z.string(),
@@ -30,19 +33,52 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>
 
 export function PersonalInfoTab() {
     const { user } = useUser();
+    const { auth, firestore, storage } = useFirebase();
+    const { toast } = useToast();
     
+    const [newImage, setNewImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(user?.photoURL || null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
             name: user?.displayName || user?.email?.split('@')[0] || '',
             email: user?.email || '',
-            phone: '',
+            phone: '', // This should be fetched from Firestore if available
         },
         mode: "onChange",
     })
 
-    function onSubmit(data: ProfileFormValues) {
-        console.log(data);
+    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setNewImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
+
+    async function onSubmit(data: ProfileFormValues) {
+        if (!user || !auth || !firestore || !storage) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Authentication context is not available.' });
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await updateUserProfile({
+                auth, firestore, storage
+            }, user, {
+                displayName: data.name,
+                phoneNumber: data.phone
+            }, newImage);
+            
+            toast({ title: 'Success', description: 'Your profile has been updated.' });
+            setNewImage(null); // Reset after successful upload
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not update profile.' });
+        } finally {
+            setIsSubmitting(false);
+        }
     }
   
     return (
@@ -53,12 +89,20 @@ export function PersonalInfoTab() {
                 <div className="flex items-center gap-6">
                     <div className="relative">
                         <Avatar className="w-24 h-24">
-                            <AvatarImage src={user?.photoURL || undefined} alt="Doctor's profile picture" />
+                            <AvatarImage src={imagePreview || undefined} alt="User's profile picture" />
                             <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8">
-                            <Camera className="h-4 w-4" />
-                            <Input type="file" className="absolute inset-0 opacity-0 cursor-pointer" />
+                        <Button size="icon" className="absolute bottom-0 right-0 rounded-full h-8 w-8" asChild>
+                            <label htmlFor="photo-upload" className="cursor-pointer">
+                                <Camera className="h-4 w-4" />
+                                <Input 
+                                    id="photo-upload" 
+                                    type="file" 
+                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                    accept="image/png, image/jpeg"
+                                    onChange={handleImageChange}
+                                />
+                            </label>
                         </Button>
                     </div>
                     <div className="flex-1">
@@ -69,7 +113,7 @@ export function PersonalInfoTab() {
                                 <FormItem>
                                 <FormLabel>Full Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Your Name" {...field} disabled />
+                                    <Input placeholder="Your Name" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -109,7 +153,7 @@ export function PersonalInfoTab() {
                     )}
                 />
                 
-                <Button type="submit">Update Personal Information</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Updating...' : 'Update Personal Information'}</Button>
             </form>
             </Form>
         </CardContent>
