@@ -114,7 +114,7 @@ export default function ReportView() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Pill className="text-blue-500"/>Current Medications</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Pill className="text-blue-500"/>Medications</CardTitle>
           </CardHeader>
           <CardContent>
              <Table>

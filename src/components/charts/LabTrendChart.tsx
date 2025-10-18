@@ -22,6 +22,18 @@ export function LabTrendChart({ data }: LabTrendChartProps) {
     );
   }
 
+  const getDomain = (data: LabHistoryPoint[]) => {
+    const values = data.map(p => p.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const padding = (max - min) * 0.1; // 10% padding
+
+    return [
+      (dataMin: number) => Math.floor(Math.max(0, dataMin - padding)),
+      (dataMax: number) => Math.ceil(dataMax + padding)
+    ];
+  };
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart
@@ -53,7 +65,7 @@ export function LabTrendChart({ data }: LabTrendChartProps) {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          domain={['dataMin - 1', 'dataMax + 1']}
+          domain={getDomain(data)}
         />
         <Tooltip
           contentStyle={{
