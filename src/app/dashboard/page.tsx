@@ -19,6 +19,7 @@ import SymptomCheckerView from '@/components/views/symptom-checker-view';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
+import PatientMessagesView from '@/components/views/patient-messages-view';
 
 interface UserProfile {
   role: 'patient' | 'doctor';
@@ -76,6 +77,8 @@ export default function DashboardPage() {
             return <SymptomCheckerView setActiveView={setActivePatientView} />;
           case 'find-doctor':
             return <FindDoctorView initialComplaint={initialComplaint} />;
+          case 'messages':
+            return <PatientMessagesView />;
           default:
             return <UploadView />;
         }
