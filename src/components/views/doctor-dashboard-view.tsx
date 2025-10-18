@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { format, formatDistanceToNow, subDays } from 'date-fns';
+import { format, subDays, parseISO } from 'date-fns';
 import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, CalendarCheck } from 'lucide-react';
 import type { Consultation, Message, DoctorPatient } from '@/lib/types';
 import { collection, query, where, getDocs, limit, orderBy, getCountFromServer, Timestamp } from 'firebase/firestore';
@@ -300,5 +300,3 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         </div>
     );
 }
-
-    
