@@ -1,188 +1,116 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { ArrowRight, Stethoscope, User, Activity } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { Activity, User, Stethoscope, ArrowLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import Header from '@/components/header';
 import { ThemeToggle } from '@/components/theme-toggle';
 
-type Role = 'patient' | 'doctor';
-
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  
-  const auth = useAuth();
-  const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, isUserLoading, router]);
-
-  const handleAuthAction = async (isSignUp: boolean) => {
-    if (!auth || !firestore || !selectedRole) {
-      toast({ variant: 'destructive', title: 'Something went wrong. Please select a role.' });
-      return;
-    }
-    setLoading(true);
-    try {
-      let userCredential;
-      if (isSignUp) {
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        // Save user role to Firestore
-        await setDoc(doc(firestore, 'users', user.uid), {
-          role: selectedRole,
-        });
-      } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-      }
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Failed',
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const renderRoleSelection = () => (
-    <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-6">
-            <Card 
-                className={cn("cursor-pointer hover:border-primary transition-all", selectedRole === 'patient' && "border-primary border-2")}
-                onClick={() => setSelectedRole('patient')}
-            >
-                <CardContent className="p-6 flex flex-col items-center justify-center">
-                    <User className="w-12 h-12 mb-4 text-primary" />
-                    <h3 className="font-semibold text-lg">Patient</h3>
-                </CardContent>
-            </Card>
-            <Card
-                className={cn("cursor-pointer hover:border-primary transition-all", selectedRole === 'doctor' && "border-primary border-2")}
-                onClick={() => setSelectedRole('doctor')}
-            >
-                <CardContent className="p-6 flex flex-col items-center justify-center">
-                    <Stethoscope className="w-12 h-12 mb-4 text-primary" />
-                    <h3 className="font-semibold text-lg">Doctor</h3>
-                </CardContent>
-            </Card>
-        </div>
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+  <div className="bg-card p-6 rounded-lg shadow-md border border-border/50 hover:shadow-lg hover:-translate-y-1 transition-all">
+    <div className="flex items-center justify-center w-12 h-12 bg-primary/10 text-primary rounded-full mb-4">
+      {icon}
     </div>
-  );
+    <h3 className="text-lg font-semibold mb-2">{title}</h3>
+    <p className="text-muted-foreground text-sm">{description}</p>
+  </div>
+);
 
-  const renderAuthForm = () => (
-    <div>
-        <Button variant="ghost" onClick={() => setSelectedRole(null)} className="mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to role selection
-        </Button>
-        <Tabs defaultValue="login" className="w-[400px]">
-            <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login as {selectedRole}</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up as {selectedRole}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-            <Card>
-                <CardHeader>
-                <CardTitle>Login</CardTitle>
-                <CardDescription>
-                    Access your {selectedRole} dashboard.
-                </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="email-login">Email</Label>
-                    <Input id="email-login" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="password-login">Password</Label>
-                    <Input id="password-login" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                </div>
-                </CardContent>
-                <CardFooter>
-                <Button onClick={() => handleAuthAction(false)} disabled={loading} className="w-full">
-                    {loading ? 'Logging in...' : 'Login'}
-                </Button>
-                </CardFooter>
-            </Card>
-            </TabsContent>
-            <TabsContent value="signup">
-            <Card>
-                <CardHeader>
-                <CardTitle>Sign Up</CardTitle>
-                <CardDescription>
-                    Create a new {selectedRole} account.
-                </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email-signup">Email</Label>
-                        <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password-signup">Password</Label>
-                        <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                <Button onClick={() => handleAuthAction(true)} disabled={loading} className="w-full">
-                    {loading ? 'Creating Account...' : 'Sign Up'}
-                </Button>
-                </CardFooter>
-            </Card>
-            </TabsContent>
-        </Tabs>
-    </div>
-  );
-
-  if (isUserLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
+export default function LandingPage() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="absolute top-4 right-4">
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="p-4 sm:p-6 lg:p-8 flex justify-between items-center">
+        <div className="flex items-center gap-3 text-primary">
+          <Activity className="w-8 h-8" />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">MediSynth</h1>
+          </div>
+        </div>
+        <div className='flex items-center gap-4'>
+            <Link href="/login">
+                <Button>Login / Sign Up</Button>
+            </Link>
             <ThemeToggle />
         </div>
-        <div className='flex flex-col items-center gap-4 mb-8'>
-            <div className="flex items-center gap-3 text-primary mb-4">
-                <Activity className="w-10 h-10" />
-                <div>
-                <h1 className="text-3xl font-bold text-foreground">MediSynth</h1>
-                <p className="text-md text-muted-foreground">AI-Powered Medical Records</p>
-                </div>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="text-center py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-foreground tracking-tight">
+            Your Health Story, Unified and Understood
+          </h1>
+          <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
+            MediSynth uses AI to digitize, structure, and summarize your medical records, giving you a clear, consolidated view of your health.
+          </p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Link href="/login">
+              <Button size="lg" className="group">
+                For Patients <User className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="group">
+                For Doctors <Stethoscope className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-12">Intelligent Health Management</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <FeatureCard
+                icon={<Stethoscope className="w-6 h-6" />}
+                title="AI-Powered Extraction"
+                description="Our pipeline uses OCR and advanced AI to automatically extract diagnoses, medications, and lab results from any medical document."
+              />
+              <FeatureCard
+                icon={<User className="w-6 h-6" />}
+                title="Consolidated Reports"
+                description="View a unified health summary and track lab result trends over time with interactive charts. All your data in one place."
+              />
+              <FeatureCard
+                icon={<ArrowRight className="w-6 h-6" />}
+                title="Secure and Private"
+                description="Your data is your own. With secure user authentication and Firestore security rules, your health information remains private."
+              />
             </div>
-            {selectedRole ? renderAuthForm() : renderRoleSelection()}
+          </div>
+        </section>
+
+        {/* How it Works Section */}
+        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/50">
+            <div className="max-w-4xl mx-auto text-center">
+                 <h2 className="text-3xl font-bold mb-12">Simple Steps to Clarity</h2>
+                 <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div className="flex flex-col items-center">
+                        <div className="flex items-center justify-center w-16 h-16 bg-card text-primary rounded-full text-2xl font-bold shadow-md border mb-4">1</div>
+                        <h3 className="font-semibold text-lg">Upload Documents</h3>
+                        <p className="text-muted-foreground text-sm">Drag and drop images or PDFs of your medical records.</p>
+                    </div>
+                    <ArrowRight className="text-primary/50 hidden md:block" />
+                     <div className="flex flex-col items-center">
+                        <div className="flex items-center justify-center w-16 h-16 bg-card text-primary rounded-full text-2xl font-bold shadow-md border mb-4">2</div>
+                        <h3 className="font-semibold text-lg">AI Analysis</h3>
+                        <p className="text-muted-foreground text-sm">MediSynth's AI pipeline extracts and structures your data.</p>
+                    </div>
+                    <ArrowRight className="text-primary/50 hidden md:block" />
+                     <div className="flex flex-col items-center">
+                        <div className="flex items-center justify-center w-16 h-16 bg-card text-primary rounded-full text-2xl font-bold shadow-md border mb-4">3</div>
+                        <h3 className="font-semibold text-lg">View Your Report</h3>
+                        <p className="text-muted-foreground text-sm">Access your unified and easy-to-understand health summary.</p>
+                    </div>
+                 </div>
+            </div>
+        </section>
+      </main>
+
+      <footer className="bg-background border-t">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-muted-foreground text-sm">
+          <p>&copy; {new Date().getFullYear()} MediSynth. All rights reserved.</p>
         </div>
+      </footer>
     </div>
   );
 }
