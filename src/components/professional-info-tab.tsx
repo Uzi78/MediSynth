@@ -20,6 +20,7 @@ import { Textarea } from "./ui/textarea";
 const professionalInfoSchema = z.object({
   licenseNumber: z.string().min(1, "License number is required"),
   specialty: z.string().min(1, "Specialty is required"),
+  location: z.string().min(1, "Location is required."),
   experience: z.coerce.number().min(0, "Experience must be a positive number"),
   consultationFee: z.coerce.number().min(0, "Fee must be a positive number"),
   education: z.string().min(1, "Education details are required"),
@@ -34,6 +35,7 @@ export function ProfessionalInfoTab() {
         defaultValues: {
             licenseNumber: '',
             specialty: '',
+            location: '',
             experience: 0,
             consultationFee: 0,
             education: '',
@@ -73,6 +75,19 @@ export function ProfessionalInfoTab() {
                                         <FormLabel>Specialty</FormLabel>
                                         <FormControl>
                                             <Input placeholder="e.g., Cardiology" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="location"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Location</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., New York, NY" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
