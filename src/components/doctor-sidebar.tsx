@@ -1,7 +1,7 @@
 'use client';
 
 import { Dispatch, SetStateAction } from 'react';
-import { LayoutDashboard, Users, ClipboardPlus, Video } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardPlus, Video, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +15,7 @@ const navItems = [
   { id: 'patients', label: 'My Patients', icon: Users },
   { id: 'consultations', label: 'Consultations', icon: Video },
   { id: 'prescription', label: 'Write Prescription', icon: ClipboardPlus },
+  { id: 'profile', label: 'My Profile', icon: User },
 ];
 
 export default function DoctorSidebar({ activeView, setActiveView }: SidebarProps) {
