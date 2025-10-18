@@ -10,6 +10,7 @@ export const mockPatients: Patient[] = [
     records: [
       {
         id: 'rec001',
+        patientId: 'p001',
         date: '2024-05-15',
         type: 'Lab Report',
         status: 'completed',
@@ -51,6 +52,7 @@ PLAN:
       },
       {
         id: 'rec002',
+        patientId: 'p001',
         date: '2023-11-20',
         type: 'Prescription',
         status: 'completed',
