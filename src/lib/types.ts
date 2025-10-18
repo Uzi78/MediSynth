@@ -114,3 +114,5 @@ export interface DoctorProfile {
     education: string;
     bio: string;
 }
+
+    
