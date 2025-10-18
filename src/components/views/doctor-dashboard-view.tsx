@@ -5,13 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, subDays } from 'date-fns';
 import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, CalendarCheck } from 'lucide-react';
-import type { Consultation, Message } from '@/lib/types';
-import { collection, query, where, updateDoc, doc, getDocs, limit, orderBy } from 'firebase/firestore';
+import type { Consultation, Message, DoctorPatient } from '@/lib/types';
+import { collection, query, where, getDocs, limit, orderBy, getCountFromServer } from 'firebase/firestore';
 import { acceptConsultation, declineConsultation } from '@/firebase/firestore/consultations';
-import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { Skeleton } from '../ui/skeleton';
 
 interface RecentMessage extends Message {
     patientName: string;
@@ -29,11 +29,15 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
     const [unreadCount, setUnreadCount] = useState(0);
     const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
     const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+    const [patientCount, setPatientCount] = useState(0);
+    const [prescriptionCount, setPrescriptionCount] = useState(0);
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
 
     useEffect(() => {
         setCurrentDate(format(new Date(), 'EEEE, MMMM do, yyyy'));
     }, []);
 
+    // --- Data fetching ---
     const consultationsCollectionRef = useMemoFirebase(() =>
         (user && firestore) ? collection(firestore, 'consultations') : null,
         [user, firestore]
@@ -43,22 +47,81 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid)) : null,
         [consultationsCollectionRef, user]
     );
-
     const { data: allConsultations, isLoading: isLoadingAllConsultations } = useCollection<Consultation>(allConsultationsQuery);
     
     const pendingConsultations = useMemo(() => {
         return allConsultations?.filter(c => c.status === 'pending') || [];
     }, [allConsultations]);
 
+    const acceptedConsultationIds = useMemo(() => {
+        return allConsultations?.filter(c => c.status === 'accepted' || c.status === 'active' || c.status === 'completed').map(c => c.id) || [];
+    }, [allConsultations]);
+    
+    const acceptedPatientIds = useMemo(() => {
+        const patientIds = allConsultations?.filter(c => c.status === 'accepted' || c.status === 'active' || c.status === 'completed').map(c => c.patientId);
+        return patientIds ? [...new Set(patientIds)] : [];
+    }, [allConsultations]);
+
+    // Fetch Patients & Prescriptions
+    useEffect(() => {
+        const fetchStats = async () => {
+            if (!firestore || !user || acceptedPatientIds.length === 0) {
+                setPatientCount(0);
+                setPrescriptionCount(0);
+                setIsLoadingStats(false);
+                return;
+            };
+            setIsLoadingStats(true);
+
+            // 1. Patient Count
+            setPatientCount(acceptedPatientIds.length);
+
+            // 2. Prescription Count for last 7 days
+            let totalPrescriptions = 0;
+            const oneWeekAgo = subDays(new Date(), 7).toISOString();
+
+            for (const patientId of acceptedPatientIds) {
+                const recordsRef = collection(firestore, 'users', patientId, 'patients', patientId, 'records');
+                const prescriptionQuery = query(recordsRef, where('type', '==', 'Prescription'), where('date', '>=', oneWeekAgo));
+                const prescriptionSnapshot = await getCountFromServer(prescriptionQuery);
+                totalPrescriptions += prescriptionSnapshot.data().count;
+            }
+            setPrescriptionCount(totalPrescriptions);
+            setIsLoadingStats(false);
+        }
+        fetchStats();
+    }, [firestore, user, acceptedPatientIds])
+
+
+    // Fetch Messages
     useEffect(() => {
         const fetchMessages = async () => {
-            if (!allConsultations || !firestore || !user) return;
+            if (!firestore || !user || acceptedConsultationIds.length === 0) {
+                setIsLoadingMessages(false);
+                setUnreadCount(0);
+                setRecentMessages([]);
+                return;
+            }
             
             setIsLoadingMessages(true);
             let totalUnread = 0;
             const latestMessagesMap = new Map<string, RecentMessage>();
 
-            for (const consult of allConsultations) {
+            // Firestore 'in' query is limited to 30 items
+            const chunks = [];
+            for (let i = 0; i < acceptedConsultationIds.length; i += 30) {
+                chunks.push(acceptedConsultationIds.slice(i, i + 30));
+            }
+
+            for (const chunk of chunks) {
+                 const messagesQuery = query(collection(firestore, 'consultations', chunk[0], 'messages'), where('__name__', '!=', ''));
+                 // This is a simplified approach. A real app would need a more robust way to query subcollections.
+                 // For now, we iterate through consultations to fetch messages.
+            }
+
+            for (const consult of (allConsultations || [])) {
+                if (consult.status === 'pending' || consult.status === 'declined') continue;
+
                 const messagesRef = collection(firestore, 'consultations', consult.id, 'messages');
                 
                 // Query for unread messages
@@ -66,7 +129,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                 const unreadSnapshot = await getDocs(unreadQuery);
                 totalUnread += unreadSnapshot.size;
 
-                // Query for the latest message for the "Recent Messages" list
+                // Query for the latest message
                 const latestMsgQuery = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
                 const latestMsgSnapshot = await getDocs(latestMsgQuery);
 
@@ -78,7 +141,6 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         patientAvatarUrl: consult.patientAvatarUrl,
                     } as RecentMessage;
                     
-                    // Only update if the new message is more recent
                     if (!latestMessagesMap.has(consult.patientId) || 
                         latestMessagesMap.get(consult.patientId)!.timestamp.seconds < latestMsg.timestamp.seconds) {
                         latestMessagesMap.set(consult.patientId, latestMsg);
@@ -93,8 +155,10 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
             setIsLoadingMessages(false);
         };
 
-        fetchMessages();
-    }, [allConsultations, firestore, user]);
+        if(!isLoadingAllConsultations) {
+            fetchMessages();
+        }
+    }, [allConsultations, firestore, user, isLoadingAllConsultations]);
 
 
     const handleAccept = async (consultation: Consultation) => {
@@ -113,6 +177,9 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         if (hour < 18) return 'Good afternoon';
         return 'Good evening';
     };
+    
+    const StatSkeleton = () => <Skeleton className="h-24 w-full" />;
+    const TextSkeleton = () => <Skeleton className="h-6 w-24" />
 
     return (
         <div className="space-y-6">
@@ -137,7 +204,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <Users className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-foreground">...</div>
+                        <div className="text-3xl font-bold text-foreground">{isLoadingStats ? <TextSkeleton /> : patientCount}</div>
                         <p className="text-xs text-muted-foreground mt-1">Assigned to you</p>
                     </CardContent>
                 </Card>
@@ -147,7 +214,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <CalendarCheck className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-foreground">{isLoadingAllConsultations ? '...' : (pendingConsultations?.length || 0)}</div>
+                        <div className="text-3xl font-bold text-foreground">{isLoadingAllConsultations ? <TextSkeleton /> : (pendingConsultations?.length || 0)}</div>
                         <p className="text-xs text-muted-foreground mt-1">Patients waiting for consultation</p>
                     </CardContent>
                 </Card>
@@ -157,7 +224,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-foreground">{isLoadingMessages ? '...' : unreadCount}</div>
+                        <div className="text-3xl font-bold text-foreground">{isLoadingMessages ? <TextSkeleton /> : unreadCount}</div>
                         <p className="text-xs text-muted-foreground mt-1">From patients</p>
                     </CardContent>
                 </Card>
@@ -167,7 +234,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <ClipboardPlus className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-foreground">...</div>
+                        <div className="text-3xl font-bold text-foreground">{isLoadingStats ? <TextSkeleton /> : prescriptionCount}</div>
                         <p className="text-xs text-muted-foreground mt-1">Issued this week</p>
                     </CardContent>
                 </Card>
@@ -183,7 +250,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <ScrollArea className='h-64'>
                         <div className="space-y-4">
                             {isLoadingAllConsultations ? <p className='text-muted-foreground'>Loading...</p> : 
-                            !pendingConsultations || pendingConsultations.length === 0 ? <p className='text-muted-foreground'>No pending requests.</p> :
+                            !pendingConsultations || pendingConsultations.length === 0 ? <div className='flex items-center justify-center h-full pt-10'><p className='text-muted-foreground'>No pending requests.</p></div> :
                             pendingConsultations.map(req => (
                                 <div key={req.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                                     <div className="flex items-center gap-4">
@@ -200,7 +267,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                                         <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700" onClick={() => handleDecline(req.id)}>
                                             <X className="w-4 h-4 mr-1" /> Decline
                                         </Button>
-                                        <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(req)}>
+                                        <Button size="sm" variant='outline' className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700" onClick={() => handleAccept(req)}>
                                             <Check className="w-4 h-4 mr-1" /> Accept
                                         </Button>
                                     </div>
@@ -219,7 +286,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <ScrollArea className='h-64'>
                         <div className="space-y-2">
                         {isLoadingMessages ? <p className='text-muted-foreground'>Loading...</p> : 
-                         recentMessages.length === 0 ? <p className='text-muted-foreground'>No recent messages.</p> :
+                         recentMessages.length === 0 ? <div className='flex items-center justify-center h-full pt-10'><p className='text-muted-foreground'>No recent messages.</p></div> :
                          recentMessages.map(msg => (
                             <div key={msg.id} className="flex items-center justify-between p-3 hover:bg-accent rounded-lg cursor-pointer" onClick={() => setActiveView('messages')}>
                                 <div className="flex items-center gap-3">

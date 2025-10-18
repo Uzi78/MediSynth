@@ -112,5 +112,5 @@ export interface DoctorProfile {
     experience: number;
     consultationFee: number;
     education: string;
-bio: string;
+    bio: string;
 }

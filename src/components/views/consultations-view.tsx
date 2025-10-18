@@ -37,8 +37,8 @@ export default function ConsultationsView() {
             <CardContent>
                 <Tabs defaultValue="requests">
                     <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="requests">Requests</TabsTrigger>
-                        <TabsTrigger value="scheduled">Scheduled</TabsTrigger>
+                        <TabsTrigger value="requests">Requests ({isLoadingPending ? '...' : pendingConsultations?.length || 0})</TabsTrigger>
+                        <TabsTrigger value="scheduled">Scheduled ({isLoadingScheduled ? '...' : scheduledConsultations?.length || 0})</TabsTrigger>
                         <TabsTrigger value="active">Active</TabsTrigger>
                         <TabsTrigger value="history">History</TabsTrigger>
                     </TabsList>
