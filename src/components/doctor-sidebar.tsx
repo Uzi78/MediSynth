@@ -22,15 +22,15 @@ const profileNavItem = { id: 'profile', label: 'My Profile', icon: User };
 
 export default function DoctorSidebar({ activeView, setActiveView }: SidebarProps) {
   return (
-    <aside className="w-64 flex-shrink-0 border-r bg-white p-4 flex flex-col justify-between">
+    <aside className="w-64 flex-shrink-0 border-r bg-background p-4 flex flex-col justify-between">
       <nav className="flex flex-col gap-2">
         {mainNavItems.map((item) => (
           <Button
             key={item.id}
-            variant={activeView === item.id ? 'default' : 'ghost'}
+            variant={activeView === item.id ? 'secondary' : 'ghost'}
             className={cn(
               "w-full justify-start gap-3 text-base h-12 px-4",
-               activeView === item.id ? "" : "text-gray-600"
+               activeView === item.id ? "" : "text-muted-foreground"
             )}
             onClick={() => setActiveView(item.id)}
           >
@@ -42,10 +42,10 @@ export default function DoctorSidebar({ activeView, setActiveView }: SidebarProp
       <nav>
          <Button
             key={profileNavItem.id}
-            variant={activeView === profileNavItem.id ? 'default' : 'ghost'}
+            variant={activeView === profileNavItem.id ? 'secondary' : 'ghost'}
             className={cn(
               "w-full justify-start gap-3 text-base h-12 px-4",
-               activeView === profileNavItem.id ? "" : "text-gray-600"
+               activeView === profileNavItem.id ? "" : "text-muted-foreground"
             )}
             onClick={() => setActiveView(profileNavItem.id)}
           >

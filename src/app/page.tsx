@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Activity, User, Stethoscope, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 type Role = 'patient' | 'doctor';
 
@@ -168,13 +169,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="absolute top-4 right-4">
+            <ThemeToggle />
+        </div>
         <div className='flex flex-col items-center gap-4 mb-8'>
             <div className="flex items-center gap-3 text-primary mb-4">
                 <Activity className="w-10 h-10" />
                 <div>
-                <h1 className="text-3xl font-bold text-gray-800">MediSynth</h1>
-                <p className="text-md text-gray-600">AI-Powered Medical Records</p>
+                <h1 className="text-3xl font-bold text-foreground">MediSynth</h1>
+                <p className="text-md text-muted-foreground">AI-Powered Medical Records</p>
                 </div>
             </div>
             {selectedRole ? renderAuthForm() : renderRoleSelection()}

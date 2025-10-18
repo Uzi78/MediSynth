@@ -88,13 +88,13 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex flex-col">
-           <div className="p-4 sm:p-6 lg:p-8 border-b">
+        <div className="min-h-screen w-full flex flex-col bg-secondary/50">
+           <div className="p-4 sm:p-6 lg:p-8 border-b bg-background">
              <Header />
            </div>
            <div className="flex flex-1">
               <PatientSidebar activeView={activePatientView} setActiveView={setActivePatientView} />
-              <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-100">
+              <main className="flex-1 p-4 sm:p-6 lg:p-8">
                 <Card className="shadow-lg h-full">
                   {renderContent()}
                 </Card>
@@ -125,13 +125,13 @@ export default function DashboardPage() {
     };
 
     return (
-      <div className="min-h-screen w-full flex flex-col">
-        <div className="p-4 sm:p-6 lg:p-8 border-b">
+      <div className="min-h-screen w-full flex flex-col bg-secondary/50">
+        <div className="p-4 sm:p-6 lg:p-8 border-b bg-background">
           <Header />
         </div>
         <div className="flex flex-1">
           <DoctorSidebar activeView={activeDoctorView} setActiveView={setActiveDoctorView} />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-100">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
             {renderContent()}
           </main>
         </div>
