@@ -7,7 +7,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -27,9 +26,6 @@ import { useEffect } from 'react';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
   const [loading, setLoading] = useState(false);
   const auth = useAuth();
   const firestore = useFirestore();
@@ -51,27 +47,10 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      let userCredential;
       if (isSignUp) {
-        if (!name || !age || !gender) {
-            toast({ variant: 'destructive', title: 'Please fill all fields for sign up.' });
-            setLoading(false);
-            return;
-        }
-        userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        // Create a patient document
-        const patientRef = doc(firestore, 'users', user.uid, 'patients', user.uid);
-        await setDoc(patientRef, {
-            id: user.uid,
-            name: name,
-            email: user.email,
-            age: parseInt(age),
-            gender: gender,
-        });
-
+        await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(auth, email, password);
       }
       router.push('/');
     } catch (error: any) {
@@ -139,26 +118,12 @@ export default function LoginPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name-signup">Full Name</Label>
-                            <Input id="name-signup" value={name} onChange={(e) => setName(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
                             <Label htmlFor="email-signup">Email</Label>
                             <Input id="email-signup" type="email" placeholder="m@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password-signup">Password</Label>
                             <Input id="password-signup" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="age-signup">Age</Label>
-                                <Input id="age-signup" type="number" value={age} onChange={(e) => setAge(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="gender-signup">Gender</Label>
-                                <Input id="gender-signup" placeholder='M / F / Other' value={gender} onChange={(e) => setGender(e.target.value)} />
-                            </div>
                         </div>
                     </CardContent>
                     <CardFooter>
