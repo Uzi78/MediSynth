@@ -1,7 +1,7 @@
 'use client';
 
 import { Dispatch, SetStateAction } from 'react';
-import { Upload, History, FileText } from 'lucide-react';
+import { Upload, History, FileText, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,7 @@ const navItems = [
   { id: 'upload', label: 'Upload New Document', icon: Upload },
   { id: 'history', label: 'View History', icon: History },
   { id: 'report', label: 'Consolidated Report', icon: FileText },
+  { id: 'find-doctor', label: 'Find a Doctor', icon: Search },
 ];
 
 export default function PatientSidebar({ activeView, setActiveView }: SidebarProps) {

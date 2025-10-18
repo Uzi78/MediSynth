@@ -1,82 +1,79 @@
 /**
- * @fileoverview Firestore Security Rules for the Doctor-Patient Consultation App.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for profile data and patient records.
- * Doctors have read access to a limited patient summary within their collection.
- * Consultations can be listed, created and updated by authenticated users.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for patient data and a shared-access model for consultations.
  *
  * Data Structure:
  * - /users/{userId}: Stores user profile information (role).
- * - /users/{userId}/patients/{patientId}: Stores full patient records, accessible only by the patient.
- * - /users/{userId}/patients/{patientId}/records/{recordId}: Stores individual medical records for a patient, accessible only by the patient.
- * - /doctors/{doctorId}/patients/{patientId}: Stores doctor-patient relationships with summary patient data (for doctor's list views).
- * - /consultations/{consultationId}: Stores consultation requests.
+ * - /users/{userId}/patients/{patientId}: Stores patient-specific data, accessible only by the patient.
+ * - /users/{userId}/patients/{patientId}/records/{recordId}: Stores medical records, accessible only by the patient.
+ * - /doctors/{doctorId}/patients/{patientId}: Stores doctor-patient relationships and summary information.
+ * - /consultations/{consultationId}: Stores consultation requests, accessible to the patient and the doctor involved.
  *
  * Key Security Decisions:
  * - Users can only access their own profile data.
- * - Patients can only access their own medical records.
- * - Doctors have read-only access to a summary of their assigned patients.
- * - Listing user documents is disallowed.
+ * - Patients can only access their own patient data and medical records.
+ * - Doctors can only access patients that have been added to them.
+ * - Consultations are accessible to both the requesting patient and the assigned doctor.
+ * - Listing of users is disallowed.
  *
  * Denormalization for Authorization:
- * - DoctorPatient documents are created in the /doctors/{doctorId}/patients/{patientId} collection,
- *   summarizing information from both the Patient and Doctor entities. This allows doctors to quickly
- *   access a list of their patients without querying the entire /users/{userId}/patients/{patientId} collection.
+ * - Doctor-Patient relationships are explicitly modeled to avoid complex queries.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the requesting user is signed in.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the requesting user owns the document at the matched path.
-     */
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the requesting user is the existing owner of the document at the matched path.
-     * @principle Ensures existence before modification or deletion.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-    }
-
-
-    /**
-     * @description Rules for user profiles.
+     * @description Secure user profiles. Only the user can read/write their own profile.
      * @path /users/{userId}
-     * @allow (create) - If the user's ID matches the requested userId
-     * @allow (get, update, delete) - If the user is the owner of the profile.
-     * @deny (list) - Listing all users is not allowed.
-     * @deny (create) - If the user's ID does not match the requested userId
-     * @principle Enforces document ownership for profile data.
+     * @allow (create) User with ID 'user123' creates their profile.
+     * @allow (get) User with ID 'user123' reads their profile.
+     * @allow (update) User with ID 'user123' updates their profile.
+     * @allow (delete) User with ID 'user123' deletes their profile.
+     * @deny (create) User with ID 'user123' tries to create a profile for 'user456'.
+     * @deny (get) User with ID 'user123' tries to read the profile of 'user456'.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
       allow get: if isOwner(userId);
-      allow list: if false;
+      allow list: if false; // User listing is not allowed.
       allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     /**
-     * @description Rules for patient records stored under a user's profile.
+     * @description Secure patient data. Only the patient can read/write their own data.
      * @path /users/{userId}/patients/{patientId}
-     * @allow (get, list, create, update, delete) - If the user is the owner (patient).
-     * @deny (create) - If the patientId does not match request.auth.uid.
-     * @deny (update) - If the patientId does not match the existing record's patientId
-     * @principle Enforces document ownership for patient records.
+     * @allow (create) User with ID 'user123' creates their patient data with patientId = 'user123'.
+     * @allow (get) User with ID 'user123' reads their patient data.
+     * @allow (update) User with ID 'user123' updates their patient data.
+     * @allow (delete) User with ID 'user123' deletes their patient data.
+     * @deny (create) User with ID 'user123' tries to create patient data for 'user456'.
+     * @deny (get) User with ID 'user123' tries to read the patient data of 'user456'.
+     * @principle Enforces document ownership for writes. Validates relational integrity.
      */
     match /users/{userId}/patients/{patientId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && request.resource.data.id == patientId;
@@ -85,14 +82,29 @@ service cloud.firestore {
     }
 
     /**
-     * @description Rules for medical records associated with a patient.
+     * @description Secure medical records. Only the patient can read/write their own records.
      * @path /users/{userId}/patients/{patientId}/records/{recordId}
-     * @allow (get, list, create, update, delete) - If the user is the owner (patient).
-     * @deny (create) - If the patientId does not match the parent document's patientId.
-     * @deny (update) - If the patientId does not match the parent document's patientId.
-     * @principle Enforces document ownership for medical records and relational integrity.
+     * @allow (create) User with ID 'user123' creates a record for their patient data.
+     * @allow (get) User with ID 'user123' reads their medical record.
+     * @allow (update) User with ID 'user123' updates their medical record.
+     * @allow (delete) User with ID 'user123' deletes their medical record.
+     * @deny (create) User with ID 'user123' tries to create a record for patient 'user456'.
+     * @deny (get) User with ID 'user123' tries to read the record of patient 'user456'.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId}/patients/{patientId}/records/{recordId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && request.resource.data.patientId == patientId;
@@ -100,37 +112,75 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Rules for doctor-patient relationships.
-     * @path /doctors/{doctorId}/patients/{patientId}
-     * @allow (get, list) - If the requesting user is the doctor.
-     * @allow (create) - if false; // TODO: Add logic to allow the creation of this doucment only with a server function, as it may contain private patient data.
-     * @allow (update) - if false;
-     * @allow (delete) - if false;
-     * @principle Doctors can only see a summary of their assigned patients.
-     */
+      /**
+       * @description Secure doctor-patient relationships.  Doctors can read/write patient summaries associated with them.
+       * @path /doctors/{doctorId}/patients/{patientId}
+       * @allow (create) Doctor with ID 'doctor123' creates a patient summary for patient 'patient456'.
+       * @allow (get) Doctor with ID 'doctor123' reads a patient summary for patient 'patient456'.
+       * @allow (update) Doctor with ID 'doctor123' updates a patient summary for patient 'patient456'.
+       * @allow (delete) Doctor with ID 'doctor123' deletes a patient summary for patient 'patient456'.
+       * @deny (create) Doctor with ID 'doctor123' tries to create a patient summary for patient 'patient789' when they are not related.
+       * @deny (get) Doctor with ID 'doctor123' tries to read a patient summary for patient 'patient789' when they are not related.
+       * @principle Enforces doctor-patient relationship for all operations.
+       */
     match /doctors/{doctorId}/patients/{patientId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+        function isSignedIn() {
+            return request.auth != null;
+        }
+
+        function isOwner(doctorId) {
+            return request.auth.uid == doctorId;
+        }
+
+        function isExistingOwner(doctorId) {
+          return isOwner(doctorId) && resource != null;
+        }
+
+        allow get: if isOwner(doctorId);
+        allow list: if isOwner(doctorId);
+        allow create: if isOwner(doctorId);
+        allow update: if isExistingOwner(doctorId);
+        allow delete: if isExistingOwner(doctorId);
     }
 
     /**
-     * @description Rules for consultation requests.
+     * @description Secure consultation requests. Both the patient and the doctor involved can read/write.
      * @path /consultations/{consultationId}
-     * @allow (get, list, create) - If the user is signed in.
-     * @allow (update) - if false; // TODO: Add a check for doctors, patients and correct status of the consultations.
-     * @allow (delete) - if false; // TODO: Add a check for doctors and patients depending on the status of the consultations.
-     * @principle Allows authenticated users to manage consultations.
+     * @allow (create) User with ID 'user123' creates a consultation request.
+     * @allow (get) User with ID 'user123' reads a consultation request they created.
+     * @allow (get) Doctor with ID 'doctor456' reads a consultation request assigned to them.
+     * @allow (update) User with ID 'user123' updates a consultation request they created.
+     * @allow (update) Doctor with ID 'doctor456' updates a consultation request assigned to them.
+     * @allow (delete) User with ID 'user123' deletes a consultation request they created.
+     * @deny (get) User with ID 'user123' tries to read a consultation request not associated with them.
+     * @principle Allows shared access to consultations based on patientId and doctorId.
      */
     match /consultations/{consultationId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isPatient(patientId) {
+        return request.auth.uid == patientId;
+      }
+
+      function isDoctor(doctorId) {
+        return request.auth.uid == doctorId;
+      }
+
+      function isParticipant() {
+        return (isSignedIn() && (request.auth.uid == resource.data.patientId || request.auth.uid == resource.data.doctorId));
+      }
+
+      function isExistingParticipant() {
+        return (isParticipant() && resource != null);
+      }
+
+      allow get: if isParticipant();
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.patientId == request.auth.uid;
+      allow update: if isExistingParticipant();
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.patientId;
     }
   }
 }

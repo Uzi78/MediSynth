@@ -112,6 +112,22 @@
         "scheduledFor": { "type": "string", "format": "date-time" }
       },
       "required": ["patientId", "patientName", "doctorId", "complaint", "status", "requestedAt"]
+    },
+    "DoctorProfile": {
+      "title": "Doctor Profile",
+      "type": "object",
+      "description": "Public-facing profile information for a doctor.",
+      "properties": {
+        "name": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "specialty": { "type": "string" },
+        "location": { "type": "string" },
+        "experience": { "type": "number" },
+        "consultationFee": { "type": "number" },
+        "education": { "type": "string" },
+        "bio": { "type": "string" }
+      },
+      "required": ["name", "specialty", "location", "experience", "consultationFee", "education"]
     }
   },
   "auth": {
@@ -141,6 +157,14 @@
           "entityName": "Record",
           "schema": { "$ref": "#/backend/entities/Record" },
           "description": "Stores medical records for a patient."
+        }
+      },
+       {
+        "path": "/doctors/{doctorId}",
+        "definition": {
+            "entityName": "DoctorProfile",
+            "schema": { "$ref": "#/backend/entities/DoctorProfile" },
+            "description": "Stores public-facing professional information for doctors."
         }
       },
       {

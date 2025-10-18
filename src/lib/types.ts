@@ -89,3 +89,15 @@ export interface Prescription {
   }[];
   instructions: string;
 }
+
+export interface DoctorProfile {
+    id: string;
+    name: string;
+    photoUrl: string;
+    specialty: string;
+    location: string;
+    experience: number;
+    consultationFee: number;
+    education: string;
+    bio: string;
+}

@@ -8,6 +8,7 @@ import DoctorSidebar from '@/components/doctor-sidebar';
 import UploadView from '@/components/views/upload-view';
 import HistoryView from '@/components/views/history-view';
 import ReportView from '@/components/views/report-view';
+import FindDoctorView from '@/components/views/find-doctor-view';
 import DoctorDashboardView from '@/components/views/doctor-dashboard-view';
 import MyPatientsView from '@/components/views/my-patients-view';
 import ConsultationsView from '@/components/views/consultations-view';
@@ -58,6 +59,8 @@ export default function DashboardPage() {
             return <HistoryView />;
           case 'report':
             return <ReportView />;
+          case 'find-doctor':
+            return <FindDoctorView />;
           default:
             return <UploadView />;
         }

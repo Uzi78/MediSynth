@@ -16,6 +16,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "./ui/card"
 import { Textarea } from "./ui/textarea";
+import { useFirestore, useUser } from "@/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 const professionalInfoSchema = z.object({
   licenseNumber: z.string().min(1, "License number is required"),
@@ -30,6 +33,10 @@ const professionalInfoSchema = z.object({
 type ProfessionalInfoFormValues = z.infer<typeof professionalInfoSchema>
 
 export function ProfessionalInfoTab() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
     const form = useForm<ProfessionalInfoFormValues>({
         resolver: zodResolver(professionalInfoSchema),
         defaultValues: {
@@ -44,8 +51,25 @@ export function ProfessionalInfoTab() {
         mode: "onChange",
     });
 
-    function onSubmit(data: ProfessionalInfoFormValues) {
-        console.log(data);
+    async function onSubmit(data: ProfessionalInfoFormValues) {
+        if (!user || !firestore) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User not authenticated.'});
+            return;
+        }
+
+        const doctorProfileRef = doc(firestore, 'doctors', user.uid);
+        
+        try {
+            await setDoc(doctorProfileRef, {
+                ...data,
+                name: user.displayName || user.email?.split('@')[0],
+                photoUrl: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`
+            }, { merge: true });
+
+            toast({ title: 'Success', description: 'Your professional profile has been updated.'});
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: error.message });
+        }
     }
   
     return (
