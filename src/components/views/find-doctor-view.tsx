@@ -8,16 +8,18 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Search, MapPin, Briefcase, DollarSign, UserPlus } from 'lucide-react';
+import { Search, MapPin, Briefcase, DollarSign, UserPlus, Eye } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { RequestConsultationDialog } from '../request-consultation-dialog';
+import { DoctorProfileDialog } from '../doctor-profile-dialog';
 
 interface DoctorResultCardProps {
     doctor: DoctorProfile;
     onRequestConsultation: (doctor: DoctorProfile) => void;
+    onViewProfile: (doctor: DoctorProfile) => void;
 }
 
-function DoctorResultCard({ doctor, onRequestConsultation }: DoctorResultCardProps) {
+function DoctorResultCard({ doctor, onRequestConsultation, onViewProfile }: DoctorResultCardProps) {
     return (
         <Card className="shadow-md hover:shadow-xl transition-shadow">
             <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
@@ -47,7 +49,10 @@ function DoctorResultCard({ doctor, onRequestConsultation }: DoctorResultCardPro
                         </div>
                     </div>
                      <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                        <Button variant="outline" className="w-full sm:w-auto">View Profile</Button>
+                        <Button variant="outline" className="w-full sm:w-auto" onClick={() => onViewProfile(doctor)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Profile
+                        </Button>
                         <Button className="w-full sm:w-auto" onClick={() => onRequestConsultation(doctor)}>
                             <UserPlus className="w-4 h-4 mr-2" />
                             Request Consultation
@@ -88,7 +93,8 @@ interface FindDoctorViewProps {
 
 export default function FindDoctorView({ initialComplaint }: FindDoctorViewProps) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+    const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
     const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
 
     const firestore = useFirestore();
@@ -102,7 +108,12 @@ export default function FindDoctorView({ initialComplaint }: FindDoctorViewProps
     
     const handleRequestConsultation = (doctor: DoctorProfile) => {
         setSelectedDoctor(doctor);
-        setIsDialogOpen(true);
+        setIsRequestDialogOpen(true);
+    };
+
+    const handleViewProfile = (doctor: DoctorProfile) => {
+        setSelectedDoctor(doctor);
+        setIsProfileDialogOpen(true);
     };
 
     const filteredDoctors = doctors?.filter(doctor =>
@@ -137,7 +148,8 @@ export default function FindDoctorView({ initialComplaint }: FindDoctorViewProps
                            <DoctorResultCard 
                                 key={doctor.id} 
                                 doctor={doctor} 
-                                onRequestConsultation={handleRequestConsultation} 
+                                onRequestConsultation={handleRequestConsultation}
+                                onViewProfile={handleViewProfile}
                            />
                         )}
                     </div>
@@ -150,9 +162,14 @@ export default function FindDoctorView({ initialComplaint }: FindDoctorViewProps
         </div>
         <RequestConsultationDialog 
             doctor={selectedDoctor}
-            open={isDialogOpen}
-            onOpenChange={setIsDialogOpen}
+            open={isRequestDialogOpen}
+            onOpenChange={setIsRequestDialogOpen}
             initialComplaint={initialComplaint}
+        />
+        <DoctorProfileDialog
+            doctor={selectedDoctor}
+            open={isProfileDialogOpen}
+            onOpenChange={setIsProfileDialogOpen}
         />
         </>
     );
