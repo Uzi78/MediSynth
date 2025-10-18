@@ -11,33 +11,37 @@ export default function MyPatientsView() {
     const { user } = useUser();
     const firestore = useFirestore();
 
-    // Fetch the list of patients assigned to the doctor
+    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+
     const doctorPatientsCollectionRef = useMemoFirebase(() =>
         (user && firestore) ? collection(firestore, 'doctors', user.uid, 'patients') : null,
         [user, firestore]
     );
-    const { data: doctorPatients, isLoading: isLoadingPatients } = useCollection<DoctorPatient>(doctorPatientsCollectionRef);
+    const { data: doctorPatients, isLoading: isLoadingPatients } = useCollection<DoctorPatient>(doctorPatientsCollectionRef, {
+        onData: (data) => {
+            if (!selectedPatientId && data && data.length > 0) {
+                setSelectedPatientId(data[0].id);
+            }
+        }
+    });
 
-    // Keep track of the selected patient
-    const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-    
-    // Automatically select the first patient in the list if none is selected
-    if (!selectedPatientId && doctorPatients && doctorPatients.length > 0) {
-        setSelectedPatientId(doctorPatients[0].id);
-    }
-    
+    // Fetch records for the selected patient
+    const patientRecordsCollectionRef = useMemoFirebase(() =>
+        (user && firestore && selectedPatientId) ? collection(firestore, 'users', selectedPatientId, 'patients', selectedPatientId, 'records') : null,
+        [user, firestore, selectedPatientId]
+    );
+    const { data: patientRecords, isLoading: isLoadingRecords } = useCollection<RecordType>(patientRecordsCollectionRef);
+
     const selectedPatientSummary = doctorPatients?.find(p => p.id === selectedPatientId);
 
-    // Create a Patient object from the DoctorPatient summary data
-    // NOTE: The 'records' array is empty because doctors do not have access to the patient's full record history.
-    // The UI should handle this gracefully.
     const patientDetails: Patient | null = selectedPatientSummary ? {
         id: selectedPatientSummary.id,
         name: selectedPatientSummary.name,
         age: selectedPatientSummary.age,
         gender: selectedPatientSummary.gender,
-        email: 'N/A', // Email is private and not available in the doctor's summary view
-        records: [], // Doctors view summaries, not the full record list.
+        email: 'N/A',
+        records: patientRecords || [],
+        recordCount: patientRecords?.length ?? selectedPatientSummary.recordCount,
     } : null;
 
     return (
@@ -53,7 +57,7 @@ export default function MyPatientsView() {
             <div className="lg:col-span-8 xl:col-span-9">
                 <PatientDetails 
                   patient={patientDetails} 
-                  isLoading={isLoadingPatients}
+                  isLoading={isLoadingPatients || (selectedPatientId ? isLoadingRecords : false)}
                 />
             </div>
         </div>

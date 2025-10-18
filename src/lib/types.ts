@@ -41,6 +41,7 @@ export interface Patient {
   gender: 'M' | 'F' | 'Other';
   email: string;
   records: Record[];
+  recordCount: number;
 }
 
 // Summary data for a doctor's view of a patient
