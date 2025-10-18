@@ -77,39 +77,39 @@ export default function MessagePatientView() {
       <div className="lg:col-span-4 xl:col-span-3">
         <Card className="h-full shadow-md">
             <CardContent className="p-0">
-                <div className="p-4 border-b">
-                    <Command className="rounded-lg border-0 shadow-none bg-transparent">
+                <Command className="rounded-lg border-0 shadow-none bg-transparent h-full flex flex-col">
+                    <div className='p-4 border-b'>
                         <CommandInput placeholder="Search for a patient..." />
-                    </Command>
-                </div>
-                <ScrollArea className="h-[calc(100vh-18rem)]">
-                    <CommandList>
-                        <CommandEmpty>No results found.</CommandEmpty>
-                        <CommandGroup>
-                        {mockPatients.map((patient) => (
-                            <CommandItem
-                                key={patient.id}
-                                onSelect={() => setSelectedPatient(patient)}
-                                className={cn(
-                                    "flex items-center gap-4 p-3 cursor-pointer m-2 rounded-md",
-                                    selectedPatient?.id === patient.id && "bg-accent"
-                                )}
-                            >
-                                <Avatar>
-                                    <AvatarImage src={`https://i.pravatar.cc/150?u=${patient.id}`} />
-                                    <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-medium">{patient.name}</p>
-                                    <p className="text-sm text-gray-600 truncate max-w-40">
-                                       {(mockMessages[patient.id as keyof Messages] || []).slice(-1)[0]?.text || 'No messages yet'}
-                                    </p>
-                                </div>
-                            </CommandItem>
-                        ))}
-                        </CommandGroup>
-                    </CommandList>
-                </ScrollArea>
+                    </div>
+                    <ScrollArea className="h-[calc(100vh-18rem)]">
+                        <CommandList>
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup>
+                            {mockPatients.map((patient) => (
+                                <CommandItem
+                                    key={patient.id}
+                                    onSelect={() => setSelectedPatient(patient)}
+                                    className={cn(
+                                        "flex items-center gap-4 p-3 cursor-pointer m-2 rounded-md",
+                                        selectedPatient?.id === patient.id && "bg-accent"
+                                    )}
+                                >
+                                    <Avatar>
+                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${patient.id}`} />
+                                        <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-medium">{patient.name}</p>
+                                        <p className="text-sm text-gray-600 truncate max-w-40">
+                                        {(mockMessages[patient.id as keyof Messages] || []).slice(-1)[0]?.text || 'No messages yet'}
+                                        </p>
+                                    </div>
+                                </CommandItem>
+                            ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </ScrollArea>
+                </Command>
             </CardContent>
         </Card>
       </div>
