@@ -5,6 +5,9 @@ import { Upload, FileText, Loader, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
+import type { Record as RecordType } from '@/lib/types';
+import RecordDisplay from './record-display';
+import { mockPatients } from '@/lib/data';
 
 interface UploadedFile {
   id: string;
@@ -28,16 +31,18 @@ interface PatientPortalProps {
 export default function PatientPortal({ setPipelineStage }: PatientPortalProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [processedRecord, setProcessedRecord] = useState<RecordType | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = (files: FileList) => {
+    setProcessedRecord(null); // Clear previous results
     const newFiles: UploadedFile[] = Array.from(files).map(file => ({
       id: crypto.randomUUID(),
       name: file.name,
       progress: 0,
       status: 'Uploading...',
     }));
-    setUploadedFiles(prev => [...prev, ...newFiles]);
+    setUploadedFiles(newFiles);
     setPipelineStage(0);
 
     let stageIndex = 0;
@@ -53,6 +58,9 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
         stageIndex++;
         if (stageIndex >= pipelineStages.length) {
             clearInterval(interval);
+            // Simulate showing a processed record after completion
+            // We'll use the first record from the mock data as an example result
+            setProcessedRecord(mockPatients[0].records[0]);
         }
     }, 1500);
   };
@@ -106,7 +114,7 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
         </div>
       </div>
 
-      {uploadedFiles.length > 0 && (
+      {uploadedFiles.length > 0 && !processedRecord && (
         <div className="space-y-4">
           <h3 className="font-semibold text-lg">Processing Status</h3>
           {uploadedFiles.map(file => (
@@ -128,6 +136,13 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
               <Progress value={file.progress} />
             </div>
           ))}
+        </div>
+      )}
+
+      {processedRecord && (
+        <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Processed Record Details</h3>
+            <RecordDisplay record={processedRecord} />
         </div>
       )}
     </div>
