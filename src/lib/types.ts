@@ -98,7 +98,7 @@ export interface Prescription {
     frequency: string;
     duration: string;
   }[];
-  instructions: string;
+  instructions?: string;
 }
 
 export interface DoctorProfile {

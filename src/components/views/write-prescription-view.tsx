@@ -13,10 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Pill, Plus, Trash2, FileText, Send } from 'lucide-react';
+import { User, Pill, Plus, Trash2, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { sendPrescriptionToPatient } from '@/firebase/firestore/prescriptions';
+import { useToast } from '@/hooks/use-toast';
 
 const prescriptionSchema = z.object({
   medications: z.array(z.object({
@@ -78,9 +80,10 @@ interface PrescriptionFormStepProps {
     form: UseFormReturn<PrescriptionFormValues>;
     onBack: () => void;
     onSubmit: (data: PrescriptionFormValues) => void;
+    isSending: boolean;
 }
 
-function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionFormStepProps) {
+function PrescriptionFormStep({ patient, form, onBack, onSubmit, isSending }: PrescriptionFormStepProps) {
     const { fields, append, remove } = useFieldArray({
         name: "medications",
         control: form.control,
@@ -176,7 +179,9 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
                     </CardContent>
                     </Card>
                     <div className="lg:hidden mt-4">
-                         <Button variant="default" className="w-full" type="submit" disabled={!form.formState.isValid}><Send className="mr-2 h-4 w-4"/> Send to Patient</Button>
+                         <Button variant="default" className="w-full" type="submit" disabled={!form.formState.isValid || isSending}>
+                           {isSending ? 'Sending...' : <><Send className="mr-2 h-4 w-4"/> Send to Patient</>}
+                         </Button>
                     </div>
                 </form>
                 </Form>
@@ -223,7 +228,9 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
                     </div>
                     </ScrollArea>
                     <div className="mt-4 space-y-2">
-                        <Button variant="default" className="w-full" onClick={form.handleSubmit(onSubmit)} disabled={!form.formState.isValid}><Send className="mr-2 h-4 w-4"/> Send to Patient</Button>
+                        <Button variant="default" className="w-full" onClick={form.handleSubmit(onSubmit)} disabled={!form.formState.isValid || isSending}>
+                            {isSending ? 'Sending...' : <><Send className="mr-2 h-4 w-4"/> Send to Patient</>}
+                        </Button>
                     </div>
                 </CardContent>
                 </Card>
@@ -235,8 +242,10 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
 export default function WritePrescriptionView() {
   const [selectedPatient, setSelectedPatient] = useState<DoctorPatient | null>(null);
   const [step, setStep] = useState(1);
+  const [isSending, setIsSending] = useState(false);
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const doctorPatientsCollectionRef = useMemoFirebase(() =>
     (user && firestore) ? collection(firestore, 'doctors', user.uid, 'patients') : null,
@@ -252,9 +261,21 @@ export default function WritePrescriptionView() {
     },
   });
 
-  const onSubmit = (data: PrescriptionFormValues) => {
-    console.log("Prescription Data:", data);
-    // Here you would handle submitting the prescription
+  const onSubmit = async (data: PrescriptionFormValues) => {
+    if (!user || !firestore || !selectedPatient) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot send prescription. User or patient not selected.' });
+      return;
+    }
+    setIsSending(true);
+    try {
+      await sendPrescriptionToPatient(firestore, user.uid, selectedPatient.id, data);
+      toast({ title: 'Success', description: `Prescription sent to ${selectedPatient.name}.` });
+      handleGoBack();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Failed to Send', description: error.message });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleSelectPatient = (patient: DoctorPatient) => {
@@ -281,7 +302,8 @@ export default function WritePrescriptionView() {
             patient={selectedPatient} 
             form={form} 
             onBack={handleGoBack} 
-            onSubmit={onSubmit} 
+            onSubmit={onSubmit}
+            isSending={isSending}
           />
       )}
     </div>
