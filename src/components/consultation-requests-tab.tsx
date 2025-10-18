@@ -29,9 +29,9 @@ interface ConsultationRequestsTabProps {
 export function ConsultationRequestsTab({ consultations, isLoading }: ConsultationRequestsTabProps) {
     const firestore = useFirestore();
 
-    const handleAccept = async (consultationId: string) => {
+    const handleAccept = async (consultation: Consultation) => {
         if (!firestore) return;
-        await acceptConsultation(firestore, consultationId);
+        await acceptConsultation(firestore, consultation);
     };
 
     const handleDecline = async (consultationId: string) => {
@@ -68,7 +68,7 @@ export function ConsultationRequestsTab({ consultations, isLoading }: Consultati
                             </Avatar>
                             <div>
                                 <p className="font-bold">{req.patientName}</p>
-                                <p className="text-sm text-gray-500">{req.patientAge}, {req.patientGender} &middot; Requested on {new Date(req.requestedAt).toLocaleTimeString()}</p>
+                                <p className="text-sm text-gray-500">{req.patientAge}, {req.patientGender} &middot; Requested on {new Date(req.requestedAt).toLocaleDateString()}</p>
                                 <p className="text-sm mt-1 italic text-gray-700">"{req.complaint}"</p>
                             </div>
                         </div>
@@ -80,7 +80,7 @@ export function ConsultationRequestsTab({ consultations, isLoading }: Consultati
                                 <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700" onClick={() => handleDecline(req.id)}>
                                     <X className="w-4 h-4 mr-1" /> Decline
                                 </Button>
-                                <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700" onClick={() => handleAccept(req.id)}>
+                                <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50 hover:text-green-700" onClick={() => handleAccept(req)}>
                                     <Check className="w-4 h-4 mr-1" /> Accept
                                 </Button>
                             </div>

@@ -35,9 +35,9 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
 
     const { data: pendingConsultations, isLoading: isLoadingConsultations } = useCollection<Consultation>(pendingConsultationsQuery);
 
-    const handleAccept = async (consultationId: string) => {
+    const handleAccept = async (consultation: Consultation) => {
         if (!firestore) return;
-        await acceptConsultation(firestore, consultationId);
+        await acceptConsultation(firestore, consultation);
     };
 
     const handleDecline = async (consultationId: string) => {
@@ -141,7 +141,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                                     <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700" onClick={() => handleDecline(req.id)}>
                                         <X className="w-4 h-4 mr-1" /> Decline
                                     </Button>
-                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(req.id)}>
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(req)}>
                                         <Check className="w-4 h-4 mr-1" /> Accept
                                     </Button>
                                 </div>
