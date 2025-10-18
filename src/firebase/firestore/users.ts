@@ -28,7 +28,7 @@ export async function updateUserProfile(
     data: { displayName?: string, phoneNumber?: string | null },
     newImage?: File | null
 ) {
-    const { auth, firestore, storage } = services;
+    const { firestore, storage } = services;
     const updateData: UserProfileData = { ...data };
 
     // 1. Upload new image if provided
@@ -50,9 +50,12 @@ export async function updateUserProfile(
     // 3. Update Firestore user document
     const userDocRef = doc(firestore, 'users', user.uid);
     const firestoreUpdate: Record<string, any> = {
-        displayName: data.displayName,
         // The user's role should be preserved, so we merge.
     };
+
+    if (data.displayName) {
+        firestoreUpdate.displayName = data.displayName;
+    }
     if (updateData.photoURL) {
         firestoreUpdate.photoURL = updateData.photoURL;
     }
@@ -60,7 +63,9 @@ export async function updateUserProfile(
         firestoreUpdate.phoneNumber = data.phoneNumber;
     }
 
-    await setDoc(userDocRef, firestoreUpdate, { merge: true });
+    if (Object.keys(firestoreUpdate).length > 0) {
+        await setDoc(userDocRef, firestoreUpdate, { merge: true });
+    }
 
     // The onAuthStateChanged listener will handle the local user state update automatically.
 }

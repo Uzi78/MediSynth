@@ -26,7 +26,6 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
     const { user } = useUser();
     const firestore = useFirestore();
     const [currentDate, setCurrentDate] = useState('');
-    const [unreadCount, setUnreadCount] = useState(0);
     const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
     const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const [patientCount, setPatientCount] = useState(0);
@@ -80,19 +79,25 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                 const oneWeekAgo = subDays(new Date(), 7);
                 let totalPrescriptions = 0;
                 
-                for (const patient of doctorPatients) {
-                     const recordsRef = collection(firestore, 'users', patient.id, 'patients', patient.id, 'records');
-                     const q = query(recordsRef, 
-                        where('type', '==', 'Prescription'), 
-                        where('date', '>=', oneWeekAgo.toISOString())
-                     );
-                     try {
-                        const countSnapshot = await getCountFromServer(q);
-                        totalPrescriptions += countSnapshot.data().count;
-                     } catch (e) {
-                        console.error(`Could not fetch prescription count for patient ${patient.id}`, e);
-                        // This can fail if the index is not created yet. We'll proceed without it.
-                     }
+                const patientIds = doctorPatients.map(p => p.id);
+
+                if (patientIds.length > 0) {
+                    // This is less efficient than a composite index query, but avoids the need for manual index creation.
+                    // For a production app with many patients/records, an indexed query is better.
+                    for (const patientId of patientIds) {
+                        const recordsRef = collection(firestore, 'users', patientId, 'patients', patientId, 'records');
+                        try {
+                            const recordsSnapshot = await getDocs(recordsRef);
+                            recordsSnapshot.forEach(doc => {
+                                const record = doc.data();
+                                if (record.type === 'Prescription' && parseISO(record.date) >= oneWeekAgo) {
+                                    totalPrescriptions++;
+                                }
+                            });
+                        } catch (e) {
+                           console.error(`Could not fetch prescription count for patient ${patientId}`, e);
+                        }
+                    }
                 }
                 setPrescriptionCount(totalPrescriptions);
             } else {
@@ -110,31 +115,23 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
             if (!firestore || !user || isLoadingAllConsultations) {
                  if(!isLoadingAllConsultations) {
                      setIsLoadingMessages(false);
-                     setUnreadCount(0);
                      setRecentMessages([]);
                  }
                 return;
             }
             
             setIsLoadingMessages(true);
-            let totalUnread = 0;
             const latestMessagesMap = new Map<string, RecentMessage>();
 
             const openConsultations = allConsultations?.filter(c => c.status !== 'pending' && c.status !== 'declined') || [];
             if(openConsultations.length === 0) {
                 setIsLoadingMessages(false);
-                setUnreadCount(0);
                 setRecentMessages([]);
                 return;
             }
 
             for (const consult of openConsultations) {
                 const messagesRef = collection(firestore, 'consultations', consult.id, 'messages');
-                
-                // Query for unread messages sent by patient
-                const unreadQuery = query(messagesRef, where('senderId', '==', consult.patientId), where('isRead', '==', false));
-                const unreadSnapshot = await getDocs(unreadQuery);
-                totalUnread += unreadSnapshot.size;
 
                 // Query for the latest message in the conversation
                 const latestMsgQuery = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
@@ -159,7 +156,6 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                 }
             }
 
-            setUnreadCount(totalUnread);
             const sortedRecentMessages = Array.from(latestMessagesMap.values())
                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
             setRecentMessages(sortedRecentMessages);
@@ -179,13 +175,6 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         if (!firestore) return;
         await declineConsultation(firestore, consultationId);
     };
-
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Good morning';
-        if (hour < 18) return 'Good afternoon';
-        return 'Good evening';
-    };
     
     const StatSkeleton = () => <Skeleton className="h-6 w-24" />;
 
@@ -194,7 +183,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                        {getGreeting()}, Dr. {user?.displayName || user?.email?.split('@')[0] || 'User'}
+                        Welcome Back, Dr. {user?.displayName || user?.email?.split('@')[0] || 'User'}
                     </h1>
                     <p className="text-md text-muted-foreground">{currentDate}</p>
                 </div>
@@ -205,7 +194,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-foreground">My Patients</CardTitle>
@@ -224,16 +213,6 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     <CardContent>
                         <div className="text-3xl font-bold text-foreground">{isLoadingAllConsultations ? <StatSkeleton /> : (pendingConsultations?.length || 0)}</div>
                         <p className="text-xs text-muted-foreground mt-1">Patients waiting for consultation</p>
-                    </CardContent>
-                </Card>
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-foreground">Unread Messages</CardTitle>
-                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-foreground">{isLoadingMessages ? <StatSkeleton /> : unreadCount}</div>
-                        <p className="text-xs text-muted-foreground mt-1">From patients</p>
                     </CardContent>
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
