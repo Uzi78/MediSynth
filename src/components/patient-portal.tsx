@@ -9,6 +9,7 @@ import type { Record as RecordType } from '@/lib/types';
 import RecordDisplay from './record-display';
 import { extractMedicalData, ExtractMedicalDataOutput } from '@/ai/flows/extract-medical-data';
 import { generateConciseSummary } from '@/ai/flows/generate-concise-summary';
+import { ocrDocument } from '@/ai/flows/ocr-document';
 import { useToast } from '@/hooks/use-toast';
 
 interface UploadedFile {
@@ -20,9 +21,10 @@ interface UploadedFile {
 
 const pipelineStages = [
     { progress: 0, status: 'Uploading...', stageIndex: 0 },
-    { progress: 25, status: 'Extracting data...', stageIndex: 1 },
-    { progress: 65, status: 'Generating summary...', stageIndex: 2 },
-    { progress: 100, status: 'Completed', stageIndex: 3 },
+    { progress: 25, status: 'Performing OCR...', stageIndex: 1 },
+    { progress: 50, status: 'Extracting data...', stageIndex: 2 },
+    { progress: 75, status: 'Generating summary...', stageIndex: 3 },
+    { progress: 100, status: 'Completed', stageIndex: 4 },
 ];
 
 interface PatientPortalProps {
@@ -67,20 +69,24 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
     updateProgress(0);
 
     try {
-      const documentText = await readFileAsDataURL(file);
+      const documentUri = await readFileAsDataURL(file);
       
-      // Stage 1: Extraction
+      // Stage 1: OCR
       updateProgress(1);
-      const extractedData: ExtractMedicalDataOutput = await extractMedicalData({ documentText });
+      const { rawText } = await ocrDocument({ documentUri });
       
-      // Stage 2: Summarization
+      // Stage 2: Extraction
       updateProgress(2);
+      const extractedData: ExtractMedicalDataOutput = await extractMedicalData({ documentText: rawText });
+      
+      // Stage 3: Summarization
+      updateProgress(3);
       const tempRecordForSummary = {
         id: newFile.id,
         date: new Date().toISOString(),
         type: 'Uploaded Document',
         status: 'processing' as const,
-        rawDocument: '', // Not needed for summary generation
+        rawDocument: rawText,
         extractedData: {
             diagnosis: extractedData.diagnosis,
             medications: extractedData.medications,
@@ -90,13 +96,13 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
 
       const { summary } = await generateConciseSummary({ record: tempRecordForSummary });
 
-      // Stage 3: Completion
-      updateProgress(3);
+      // Stage 4: Completion
+      updateProgress(4);
       const finalRecord: RecordType = {
         ...tempRecordForSummary,
         status: 'completed',
         summary: summary,
-        rawDocument: "Raw document text would be stored here in a real scenario, but we'll display the extracted data.",
+        rawDocument: rawText,
       };
       setProcessedRecord(finalRecord);
 

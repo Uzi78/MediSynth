@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ExtractMedicalDataInputSchema = z.object({
-  documentText: z.string().describe("A medical document (e.g., lab report, prescription) as a data URI. It must include a MIME type (e.g., 'data:image/png;base64,...' or 'data:application/pdf;base64,...')."),
+  documentText: z.string().describe("The raw text content of a medical document (e.g., lab report, prescription)."),
 });
 export type ExtractMedicalDataInput = z.infer<typeof ExtractMedicalDataInputSchema>;
 
@@ -44,14 +44,15 @@ const extractMedicalDataPrompt = ai.definePrompt({
   name: 'extractMedicalDataPrompt',
   input: {schema: ExtractMedicalDataInputSchema},
   output: {schema: ExtractMedicalDataOutputSchema},
-  prompt: `You are an AI assistant that performs OCR and extracts structured medical data from a document.
+  prompt: `You are an AI assistant that extracts structured medical data from raw text.
 
-  Analyze the following medical document and extract the following information:
+  Analyze the following medical document text and extract the following information:
   - Diagnoses
   - Medications (name, dosage, frequency)
   - Lab Results (test, value, range, status)
 
-  Document: {{media url=documentText}}
+  Document Text:
+  {{{documentText}}}
 
   Return the extracted information in JSON format. The JSON should have the following keys:
   - diagnosis: A list of diagnoses.

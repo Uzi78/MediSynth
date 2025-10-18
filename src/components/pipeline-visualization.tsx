@@ -7,8 +7,8 @@ const stages = [
   'Upload',
   'OCR',
   'Extraction',
-  'Summarization',
-  'Organization',
+  'Summary',
+  'Complete',
 ];
 
 interface PipelineVisualizationProps {
