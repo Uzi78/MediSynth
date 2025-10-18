@@ -111,7 +111,7 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit, isSending }: Pr
                         <ScrollArea className="h-[calc(100vh-22rem)] pr-4">
                         <div className="space-y-6">
                             {fields.map((field, index) => (
-                            <div key={field.id} className="p-4 border rounded-lg relative bg-gray-50">
+                            <div key={field.id} className="p-4 border rounded-lg relative bg-muted">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <FormField control={form.control} name={`medications.${index}.drug`} render={({ field }) => (
                                     <FormItem>
@@ -194,25 +194,25 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit, isSending }: Pr
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[calc(100vh-22rem)]">
-                    <div className="space-y-4 text-sm p-4 border rounded-md bg-white">
+                    <div className="space-y-4 text-sm p-4 border rounded-md bg-background">
                         <div className="text-center">
                         <h4 className="font-bold text-lg">Dr. Smith</h4>
-                        <p className="text-xs text-gray-500">MediSynth Clinic</p>
+                        <p className="text-xs text-muted-foreground">MediSynth Clinic</p>
                         </div>
                         <Separator />
                         <div className="flex justify-between">
                             <div>
                                 <p className="font-bold">{patient?.name}</p>
-                                <p className="text-gray-600">Age: {patient?.age}, Gender: {patient?.gender}</p>
+                                <p className="text-muted-foreground">Age: {patient?.age}, Gender: {patient?.gender}</p>
                             </div>
-                            <p className="text-gray-600">Date: {format(new Date(), 'yyyy-MM-dd')}</p>
+                            <p className="text-muted-foreground">Date: {format(new Date(), 'yyyy-MM-dd')}</p>
                         </div>
                         <Separator />
                         <div className="space-y-3">
                         {watchMedications.map((med, index) => (
                             med.drug && <div key={index}>
                             <p className="font-bold flex items-center gap-2"><Pill className="h-4 w-4" /> {med.drug} {med.strength} {med.form}</p>
-                            <p className="pl-6 text-gray-700">{med.dosage}, {med.frequency} for {med.duration}</p>
+                            <p className="pl-6 text-foreground/80">{med.dosage}, {med.frequency} for {med.duration}</p>
                             </div>
                         ))}
                         </div>
@@ -221,7 +221,7 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit, isSending }: Pr
                             <Separator />
                             <div>
                             <p className="font-bold">Instructions:</p>
-                            <p className="text-gray-700">{watchInstructions}</p>
+                            <p className="text-foreground/80">{watchInstructions}</p>
                             </div>
                         </>
                         )}

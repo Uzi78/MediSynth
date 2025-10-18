@@ -100,7 +100,7 @@ export default function SymptomCheckerView({ setActiveView }: SymptomCheckerView
             <ScrollArea className='h-[calc(100vh-30rem)] pr-4'>
               <div className="space-y-4">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="p-4 border rounded-lg relative bg-gray-50/50">
+                  <div key={field.id} className="p-4 border rounded-lg relative bg-muted">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}

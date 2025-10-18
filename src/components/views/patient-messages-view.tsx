@@ -91,7 +91,7 @@ function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultat
                 </div>
             </ScrollArea>
             <Separator />
-            <form onSubmit={handleSendMessage} className="p-4 bg-gray-50">
+            <form onSubmit={handleSendMessage} className="p-4 bg-muted">
                 <div className="flex items-center gap-2">
                     <Input 
                         placeholder="Type a message..." 
