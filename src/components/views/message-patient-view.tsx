@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import type { DoctorPatient, Message, Consultation } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
@@ -56,7 +56,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
     }
 
     const formatMessageTime = (timestamp: Message['timestamp']) => {
-        if (!timestamp) return '';
+        if (!timestamp || !('seconds' in timestamp)) return '';
         const date = new Date(timestamp.seconds * 1000);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
@@ -65,7 +65,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
         <Card className="h-full flex flex-col shadow-lg">
             <div className="p-4 border-b flex items-center gap-4">
                 <Avatar>
-                    <AvatarImage src={`https://i.pravatar.cc/150?u=${patient.id}`} />
+                    <AvatarImage src={(patient as any).avatarUrl || ''} />
                     <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -78,7 +78,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
                     {isLoadingMessages && <p>Loading messages...</p>}
                     {messages && messages.map((msg) => (
                         <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === doctorUser?.uid ? 'justify-end' : '')}>
-                            {msg.senderId !== doctorUser?.uid && <Avatar className="w-8 h-8"><AvatarFallback>{patient.name.charAt(0)}</AvatarFallback></Avatar>}
+                            {msg.senderId !== doctorUser?.uid && <Avatar className="w-8 h-8"><AvatarImage src={(patient as any).avatarUrl || ''} /><AvatarFallback>{patient.name.charAt(0)}</AvatarFallback></Avatar>}
                             <div className={cn(
                                 'p-3 rounded-lg max-w-xs lg:max-w-md',
                                 msg.senderId === doctorUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
@@ -125,7 +125,7 @@ export default function MessagePatientView() {
 
   const { data: consultations, isLoading: isLoadingConsultations } = useCollection<Consultation>(doctorConsultationsQuery);
 
-  const patients: DoctorPatient[] = useMemoFirebase(() => {
+  const patients: DoctorPatient[] = useMemo(() => {
     if (!consultations) return [];
     const patientMap = new Map<string, DoctorPatient>();
     consultations.forEach(c => {
@@ -135,8 +135,9 @@ export default function MessagePatientView() {
                 name: c.patientName,
                 age: c.patientAge,
                 gender: c.patientGender,
-                recordCount: 0 
-            });
+                recordCount: 0,
+                avatarUrl: c.patientAvatarUrl,
+            } as DoctorPatient & { avatarUrl?: string });
         }
     });
     return Array.from(patientMap.values());
@@ -181,7 +182,7 @@ export default function MessagePatientView() {
                                     )}
                                 >
                                     <Avatar>
-                                        <AvatarImage src={`https://i.pravatar.cc/150?u=${patient.id}`} />
+                                        <AvatarImage src={(patient as any).avatarUrl || ''} />
                                         <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>

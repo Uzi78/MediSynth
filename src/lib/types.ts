@@ -51,6 +51,7 @@ export interface DoctorPatient {
     age: number;
     gender: 'M' | 'F' | 'Other';
     recordCount: number;
+    avatarUrl?: string;
 }
 
 export interface Consultation {
@@ -76,7 +77,7 @@ export interface Message {
   timestamp: {
     seconds: number;
     nanoseconds: number;
-  } | null;
+  } | any; // Use `any` to accommodate serverTimestamp()
 }
 
 export interface RecentMessage {
@@ -110,5 +111,5 @@ export interface DoctorProfile {
     experience: number;
     consultationFee: number;
     education: string;
-    bio: string;
+bio: string;
 }

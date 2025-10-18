@@ -63,7 +63,7 @@ export function ProfessionalInfoTab() {
             await setDoc(doctorProfileRef, {
                 ...data,
                 name: user.displayName || user.email?.split('@')[0],
-                photoUrl: user.photoURL || `https://i.pravatar.cc/150?u=${user.uid}`
+                photoUrl: user.photoURL || ""
             }, { merge: true });
 
             toast({ title: 'Success', description: 'Your professional profile has been updated.'});
