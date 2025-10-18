@@ -175,6 +175,9 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
                         </ScrollArea>
                     </CardContent>
                     </Card>
+                    <div className="lg:hidden mt-4">
+                         <Button variant="default" className="w-full" type="submit" disabled={!form.formState.isValid}><Send className="mr-2 h-4 w-4"/> Send to Patient</Button>
+                    </div>
                 </form>
                 </Form>
             </div>
@@ -220,9 +223,7 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
                     </div>
                     </ScrollArea>
                     <div className="mt-4 space-y-2">
-                        <Button className="w-full" disabled={!form.formState.isValid}>Save as Draft</Button>
-                        <Button variant="outline" className="w-full" disabled={!form.formState.isValid}><FileText className="mr-2 h-4 w-4"/> Preview PDF</Button>
-                        <Button variant="default" className="w-full" disabled={!form.formState.isValid}><Send className="mr-2 h-4 w-4"/> Send to Patient</Button>
+                        <Button variant="default" className="w-full" onClick={form.handleSubmit(onSubmit)} disabled={!form.formState.isValid}><Send className="mr-2 h-4 w-4"/> Send to Patient</Button>
                     </div>
                 </CardContent>
                 </Card>
