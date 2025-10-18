@@ -40,4 +40,26 @@ export interface Patient {
   age: number;
   gender: 'M' | 'F' | 'Other';
   email: string;
+  records: Record[];
+}
+
+export interface ConsultationRequest {
+    id: string;
+    patient: {
+        name: string;
+        age: number;
+        gender: string;
+        avatarUrl: string;
+    };
+    requestedTime: string;
+}
+
+export interface RecentMessage {
+    id: string;
+    patient: {
+        name: string;
+        avatarUrl: string;
+    };
+    preview: string;
+    time: string;
 }
