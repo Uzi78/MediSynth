@@ -12,7 +12,7 @@ import { Input } from '../ui/input';
 import { Send, Stethoscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 
 
 function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultationId: string }) {
@@ -111,6 +111,8 @@ export default function PatientMessagesView() {
   const firestore = useFirestore();
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
   const [selectedConsultationId, setSelectedConsultationId] = useState<string | null>(null);
+  const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const consultationsCollectionRef = useMemoFirebase(() =>
     (user && firestore) ? collection(firestore, 'consultations') : null,
@@ -124,19 +126,33 @@ export default function PatientMessagesView() {
   
   const { data: consultations, isLoading: isLoadingConsultations } = useCollection<Consultation>(acceptedConsultationsQuery);
 
-  const doctorIds = useMemo(() => {
-    if (!consultations) return [];
-    return [...new Set(consultations.map(c => c.doctorId))];
-  }, [consultations]);
+  useEffect(() => {
+    async function fetchDoctors() {
+        if (!consultations || !firestore) return;
+        
+        setIsLoading(true);
+        const doctorIds = [...new Set(consultations.map(c => c.doctorId))];
 
-  const { data: allDoctors, isLoading: isLoadingDoctors } = useCollection<DoctorProfile>(
-      useMemoFirebase(() => firestore ? collection(firestore, 'doctors') : null, [firestore])
-  );
+        if (doctorIds.length > 0) {
+            const doctorsRef = collection(firestore, 'doctors');
+            const q = query(doctorsRef, where('__name__', 'in', doctorIds));
+            const querySnapshot = await getDocs(q);
+            const fetchedDoctors: DoctorProfile[] = [];
+            querySnapshot.forEach(doc => {
+                fetchedDoctors.push({ id: doc.id, ...doc.data() } as DoctorProfile);
+            });
+            setDoctors(fetchedDoctors);
 
-  const doctors = useMemo(() => {
-    if (!allDoctors || doctorIds.length === 0) return [];
-    return allDoctors.filter(doc => doctorIds.includes(doc.id));
-  }, [allDoctors, doctorIds]);
+            if (fetchedDoctors.length > 0 && !selectedDoctor) {
+              handleSelectDoctor(fetchedDoctors[0]);
+            }
+        } else {
+            setDoctors([]);
+        }
+        setIsLoading(false);
+    }
+    fetchDoctors();
+  }, [consultations, firestore]);
 
   const handleSelectDoctor = (doctor: DoctorProfile) => {
     setSelectedDoctor(doctor);
@@ -152,8 +168,6 @@ export default function PatientMessagesView() {
     }
   }, [doctors, selectedDoctor]);
 
-
-  const isLoading = isLoadingConsultations || isLoadingDoctors;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">

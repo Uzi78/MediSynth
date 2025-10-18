@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { DoctorPatient, Message } from '@/lib/types';
+import type { DoctorPatient, Message, Consultation } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -118,15 +118,13 @@ export default function MessagePatientView() {
     [user, firestore]
   );
   
-  // This query gets all consultations where the doctor is a participant.
   const doctorConsultationsQuery = useMemoFirebase(() =>
-    consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid)) : null,
+    consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid), where('status', 'in', ['accepted', 'active', 'completed'])) : null,
     [consultationsCollectionRef, user]
   );
 
-  const { data: consultations, isLoading: isLoadingConsultations } = useCollection(doctorConsultationsQuery);
+  const { data: consultations, isLoading: isLoadingConsultations } = useCollection<Consultation>(doctorConsultationsQuery);
 
-  // Derive unique patients from consultations
   const patients: DoctorPatient[] = useMemoFirebase(() => {
     if (!consultations) return [];
     const patientMap = new Map<string, DoctorPatient>();
@@ -137,7 +135,7 @@ export default function MessagePatientView() {
                 name: c.patientName,
                 age: c.patientAge,
                 gender: c.patientGender,
-                recordCount: 0 // This could be fetched separately if needed
+                recordCount: 0 
             });
         }
     });
@@ -147,7 +145,6 @@ export default function MessagePatientView() {
   
   const handleSelectPatient = (patient: DoctorPatient) => {
     setSelectedPatient(patient);
-    // Find the first consultation with this patient to load messages
     const consultation = consultations?.find(c => c.patientId === patient.id);
     if(consultation) {
         setSelectedConsultationId(consultation.id);
