@@ -34,7 +34,7 @@ export default function Home() {
     <div className="min-h-screen w-full p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <Header activeTab={activeTab} setActiveTab={setActiveTab} />
-        {activeTab === 'patient' && <PipelineVisualization currentStage={pipelineStage} />}
+        {activeTab === 'patient' && pipelineStage > -1 && <PipelineVisualization currentStage={pipelineStage} />}
         <Card className="shadow-lg">
           {activeTab === 'patient' ? (
             <PatientPortal setPipelineStage={setPipelineStage} />
