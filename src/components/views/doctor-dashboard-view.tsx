@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, Dispatch, SetStateAction, useMemo } from 'react';
@@ -5,10 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { format, subDays, parseISO } from 'date-fns';
-import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, CalendarCheck } from 'lucide-react';
+import { format, subDays, parseISO, formatDistanceToNow } from 'date-fns';
+import { Users, MessageSquare, ClipboardPlus, Check, X, Send } from 'lucide-react';
 import type { Consultation, Message, DoctorPatient } from '@/lib/types';
-import { collection, query, where, getDocs, limit, orderBy, getCountFromServer, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, orderBy, Timestamp } from 'firebase/firestore';
 import { acceptConsultation, declineConsultation } from '@/firebase/firestore/consultations';
 import { ScrollArea } from '../ui/scroll-area';
 import { Skeleton } from '../ui/skeleton';
@@ -25,16 +26,11 @@ interface DoctorDashboardViewProps {
 export default function DoctorDashboardView({ setActiveView }: DoctorDashboardViewProps) {
     const { user } = useUser();
     const firestore = useFirestore();
-    const [currentDate, setCurrentDate] = useState('');
     const [recentMessages, setRecentMessages] = useState<RecentMessage[]>([]);
     const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const [patientCount, setPatientCount] = useState(0);
     const [prescriptionCount, setPrescriptionCount] = useState(0);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
-
-    useEffect(() => {
-        setCurrentDate(format(new Date(), 'EEEE, MMMM do, yyyy'));
-    }, []);
 
     // --- Data fetching ---
     const consultationsCollectionRef = useMemoFirebase(() =>
@@ -185,7 +181,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                         Welcome Back, Dr. {user?.displayName || user?.email?.split('@')[0] || 'User'}
                     </h1>
-                    <p className="text-md text-muted-foreground">{currentDate}</p>
+                    <p className="text-md text-muted-foreground">{format(new Date(), 'EEEE, MMMM do, yyyy')}</p>
                 </div>
                 <div className='flex items-center gap-2'>
                     <Button variant="outline" onClick={() => setActiveView('prescription')}><ClipboardPlus /> Write Prescription</Button>
@@ -208,7 +204,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-foreground">Pending Consultations</CardTitle>
-                        <CalendarCheck className="h-5 w-5 text-muted-foreground" />
+                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-foreground">{isLoadingAllConsultations ? <StatSkeleton /> : (pendingConsultations?.length || 0)}</div>
@@ -300,3 +296,5 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         </div>
     );
 }
+
+    
