@@ -1,7 +1,7 @@
 'use client';
 
 import { Dispatch, SetStateAction } from 'react';
-import { Upload, History, FileText, Search, HeartPulse, MessageSquare } from 'lucide-react';
+import { Upload, History, FileText, Search, HeartPulse, MessageSquare, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,7 @@ const navItems = [
   { id: 'symptom-checker', label: 'Symptom Checker', icon: HeartPulse },
   { id: 'find-doctor', label: 'Find a Doctor', icon: Search },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
+  { id: 'profile', label: 'My Profile', icon: User },
 ];
 
 export default function PatientSidebar({ activeView, setActiveView }: SidebarProps) {

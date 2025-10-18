@@ -14,6 +14,7 @@ import MyPatientsView from '@/components/views/my-patients-view';
 import ConsultationsView from '@/components/views/consultations-view';
 import WritePrescriptionView from '@/components/views/write-prescription-view';
 import DoctorProfileView from '@/components/views/doctor-profile-view';
+import PatientProfileView from '@/components/views/patient-profile-view';
 import MessagePatientView from '@/components/views/message-patient-view';
 import SymptomCheckerView from '@/components/views/symptom-checker-view';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -79,6 +80,8 @@ export default function DashboardPage() {
             return <FindDoctorView initialComplaint={initialComplaint} />;
           case 'messages':
             return <PatientMessagesView />;
+          case 'profile':
+            return <PatientProfileView />;
           default:
             return <UploadView />;
         }
