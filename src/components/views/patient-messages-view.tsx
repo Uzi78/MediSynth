@@ -132,7 +132,7 @@ export default function PatientMessagesView() {
         if (!consultations || !firestore) return;
         
         setIsLoading(true);
-        const doctorIds = [...new Set(consultations.map(c => c.doctorId))];
+        const doctorIds = [...new Set(consultations.map(c => c.doctorId))].filter(id => !!id);
 
         if (doctorIds.length > 0) {
             const doctorsRef = collection(firestore, 'doctors');
