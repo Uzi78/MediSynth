@@ -1,0 +1,79 @@
+/**
+ * @fileoverview Firestore Security Rules for Patient Records Management.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model, where each user can only access and manage data associated with their own user ID.
+ *
+ * Data Structure:
+ * All patient data and associated medical records are nested under the `/users/{userId}` path, ensuring clear ownership.
+ *
+ * Key Security Decisions:
+ * - User listing is disabled.
+ * - All write operations are restricted to the owner of the data.
+ *
+ * Denormalization for Authorization:
+ * The `patientId` field is denormalized into the `/records/{recordId}` documents. This enables efficient access control for records.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Restricts access to patient data to the owning user.
+     * @path /users/{userId}/patients/{patientId}
+     * @allow (create) User 'user123' can create a patient document with patientId 'patient456' under /users/user123/patients/patient456 if request.auth.uid == 'user123'.
+     * @deny (create) User 'user456' cannot create a patient document under /users/user123/patients/patient456.
+     * @allow (get) User 'user123' can get patient document with patientId 'patient456' under /users/user123/patients/patient456.
+     * @deny (get) User 'user456' cannot get patient document under /users/user123/patients/patient456.
+     * @allow (list) User 'user123' can list patient documents under /users/user123/patients.
+     * @deny (list) User 'user456' cannot list patient documents under /users/user123/patients.
+     * @allow (update) User 'user123' can update patient document with patientId 'patient456' under /users/user123/patients/patient456.
+     * @deny (update) User 'user456' cannot update patient document under /users/user123/patients/patient456.
+     * @allow (delete) User 'user123' can delete patient document with patientId 'patient456' under /users/user123/patients/patient456.
+     * @deny (delete) User 'user456' cannot delete patient document under /users/user123/patients/patient456.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/patients/{patientId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    /**
+     * @description Restricts access to medical records to the owning user, based on the parent patient document.
+     * @path /users/{userId}/patients/{patientId}/records/{recordId}
+     * @allow (create) User 'user123' can create a record with patientId 'patient456' under /users/user123/patients/patient456/records/record789 if request.auth.uid == 'user123'.
+     * @deny (create) User 'user456' cannot create a record under /users/user123/patients/patient456/records/record789.
+     * @allow (get) User 'user123' can get record with patientId 'patient456' under /users/user123/patients/patient456/records/record789.
+     * @deny (get) User 'user456' cannot get record under /users/user123/patients/patient456/records/record789.
+     * @allow (list) User 'user123' can list records under /users/user123/patients/patient456/records.
+     * @deny (list) User 'user456' cannot list records under /users/user123/patients/patient456/records.
+     * @allow (update) User 'user123' can update record with patientId 'patient456' under /users/user123/patients/patient456/records/record789.
+     * @deny (update) User 'user456' cannot update record under /users/user123/patients/patient456/records/record789.
+     * @allow (delete) User 'user123' can delete record with patientId 'patient456' under /users/user123/patients/patient456/records/record789.
+     * @deny (delete) User 'user456' cannot delete record under /users/user123/patients/patient456/records/record789.
+     * @principle Enforces document ownership and validates that the record belongs to the correct patient.
+     */
+    match /users/{userId}/patients/{patientId}/records/{recordId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.patientId == patientId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.patientId == patientId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+  }
+
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
+  }
+}
