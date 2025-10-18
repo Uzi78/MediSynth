@@ -2,17 +2,22 @@
 
 import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { DoctorProfile } from '@/lib/types';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { Badge } from '../ui/badge';
-import { Search, MapPin, Briefcase, DollarSign, Star, UserPlus } from 'lucide-react';
+import { Search, MapPin, Briefcase, DollarSign, UserPlus } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import { RequestConsultationDialog } from '../request-consultation-dialog';
 
-function DoctorResultCard({ doctor }: { doctor: DoctorProfile }) {
+interface DoctorResultCardProps {
+    doctor: DoctorProfile;
+    onRequestConsultation: (doctor: DoctorProfile) => void;
+}
+
+function DoctorResultCard({ doctor, onRequestConsultation }: DoctorResultCardProps) {
     return (
         <Card className="shadow-md hover:shadow-xl transition-shadow">
             <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
@@ -43,7 +48,7 @@ function DoctorResultCard({ doctor }: { doctor: DoctorProfile }) {
                     </div>
                      <div className="mt-3 flex flex-col sm:flex-row gap-2">
                         <Button variant="outline" className="w-full sm:w-auto">View Profile</Button>
-                        <Button className="w-full sm:w-auto">
+                        <Button className="w-full sm:w-auto" onClick={() => onRequestConsultation(doctor)}>
                             <UserPlus className="w-4 h-4 mr-2" />
                             Request Consultation
                         </Button>
@@ -77,9 +82,11 @@ function DoctorSearchSkeleton() {
     );
 }
 
-
 export default function FindDoctorView() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
+
     const firestore = useFirestore();
 
     const doctorsCollectionRef = useMemoFirebase(() =>
@@ -89,6 +96,11 @@ export default function FindDoctorView() {
 
     const { data: doctors, isLoading } = useCollection<DoctorProfile>(doctorsCollectionRef);
     
+    const handleRequestConsultation = (doctor: DoctorProfile) => {
+        setSelectedDoctor(doctor);
+        setIsDialogOpen(true);
+    };
+
     const filteredDoctors = doctors?.filter(doctor =>
         doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,6 +108,7 @@ export default function FindDoctorView() {
     );
 
     return (
+        <>
         <div className="p-0 h-full flex flex-col">
             <div className="px-6 py-4 border-b">
                  <div className="flex gap-2">
@@ -116,7 +129,13 @@ export default function FindDoctorView() {
                     <DoctorSearchSkeleton />
                 ) : filteredDoctors && filteredDoctors.length > 0 ? (
                     <div className="space-y-4">
-                       {filteredDoctors.map(doctor => <DoctorResultCard key={doctor.id} doctor={doctor} />)}
+                       {filteredDoctors.map(doctor => 
+                           <DoctorResultCard 
+                                key={doctor.id} 
+                                doctor={doctor} 
+                                onRequestConsultation={handleRequestConsultation} 
+                           />
+                        )}
                     </div>
                 ) : (
                     <div className="text-center py-10">
@@ -125,5 +144,11 @@ export default function FindDoctorView() {
                 )}
             </div>
         </div>
+        <RequestConsultationDialog 
+            doctor={selectedDoctor}
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+        />
+        </>
     );
 }
