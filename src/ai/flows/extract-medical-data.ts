@@ -28,9 +28,9 @@ const ExtractMedicalDataOutputSchema = z.object({
   labResults: z.array(
     z.object({
       test: z.string().describe('The name of the lab test.'),
-      value: z.string().describe('The value of the lab test.'),
-      range: z.string().describe('The normal range for the lab test.'),
-      status: z.string().describe('The status of the lab test (High, Normal, Low).'),
+      value: z.string().describe('The value of the lab test with units (e.g., "14.5 g/dL", "95 mg/dL").'),
+      range: z.string().describe('The normal/reference range for the lab test (e.g., "13.0-17.0", "70-100 mg/dL").'),
+      status: z.string().describe('The status of the lab test: "High", "Normal", "Low", or "Critical".'),
     })
   ).describe('A list of lab results extracted from the document.'),
 });
@@ -49,7 +49,7 @@ export async function extractMedicalData(input: ExtractMedicalDataInput): Promis
   }
   
   // Validation 2: Check for basic medical terminology
-  const hasMedicalContent = /\b(diagnosis|diagnosed|medication|prescription|rx|lab|test|result|patient|doctor|mg|ml|mcg|blood|dose|report)\b/i.test(trimmedText);
+  const hasMedicalContent = /\b(diagnosis|diagnosed|medication|prescription|rx|lab|test|result|patient|doctor|mg|ml|mcg|blood|dose|report|hemoglobin|glucose|cholesterol|creatinine)\b/i.test(trimmedText);
   
   if (!hasMedicalContent) {
     return {
@@ -86,35 +86,63 @@ const extractMedicalDataPrompt = ai.definePrompt({
   name: 'extractMedicalDataPrompt',
   input: {schema: ExtractMedicalDataInputSchema},
   output: {schema: ExtractMedicalDataOutputSchema},
-  prompt: `You are an AI assistant that extracts structured medical data from raw text.
+  prompt: `You are an expert AI medical data extraction assistant. Your job is to accurately extract structured medical information from raw document text.
 
-CRITICAL RULES:
-1. ONLY extract information that is EXPLICITLY present in the document text
-2. DO NOT infer, assume, or generate any medical information
-3. DO NOT create example or placeholder data
-4. If the document is blank, empty, or contains no medical information, return empty arrays for ALL fields
-5. If you cannot find specific information (e.g., no medications listed), leave that array empty
+IMPORTANT GUIDELINES:
+- Your primary goal is to find and extract information that is present in the document.
+- Do not invent or infer information that is not supported by the text.
+- If the document is blank, empty, or clearly contains no medical information, you MUST return empty arrays for ALL fields.
+- If you cannot find information for a specific section (e.g., no medications are listed), return an empty array for that section.
+- Preserve the exact values, units, and ranges as they appear in the document.
 
 Document Text:
 {{{documentText}}}
 
-Extract the following information ONLY if explicitly present:
-- Diagnoses
-- Medications (name, dosage, frequency)
-- Lab Results (test, value, range, status)
+Please extract the following information based on the guidelines above.
 
-Return the extracted information in JSON format with these keys:
-- diagnosis: Array of diagnosis strings (empty if none found)
-- medications: Array of medication objects (empty if none found)
-- labResults: Array of lab result objects (empty if none found)
+*DIAGNOSES:*
+- Look for sections like "Diagnosis", "Impression", "Assessment".
+- Extract disease names, conditions, or medical conclusions.
+- Examples: "Type 2 Diabetes Mellitus", "Hypertension", "Acute Bronchitis"
 
-If the document text is empty, contains only whitespace, or has no medical content, you MUST return:
+*MEDICATIONS:*
+- Look for sections like "Medications", "Prescriptions", "Rx", "Treatment".
+- For each medication, find the name, dosage (e.g., "500mg"), and frequency (e.g., "twice daily").
+
+*LAB RESULTS:*
+- Lab results often appear in tables or lists. Look for patterns with a test name, a result value, and a reference range.
+- For each lab test, extract:
+  - test: The name of the test (e.g., "Hemoglobin", "Glucose").
+  - value: The measured result WITH its units (e.g., "14.5 g/dL", "110 mg/dL").
+  - range: The reference/normal range (e.g., "13.0-17.0", "70-100").
+  - status: Determine the status ("Normal", "High", "Low", "Critical") by looking for explicit labels (like H, L, High) or by comparing the value to the provided range.
+
+Common Lab Tests to Look For:
+- Complete Blood Count (CBC): Hemoglobin, Hematocrit, WBC, RBC, Platelets
+- Metabolic Panel: Glucose, Sodium, Potassium, Creatinine
+- Lipid Panel: Total Cholesterol, LDL, HDL, Triglycerides
+- Hemoglobin A1c
+
+OUTPUT FORMAT:
+Return JSON with these exact keys. If a section is empty, its array must be empty.
+{
+  "diagnosis": ["array of diagnosis strings"],
+  "medications": [
+    { "name": "...", "dosage": "...", "frequency": "..." }
+  ],
+  "labResults": [
+    { "test": "...", "value": "...", "range": "...", "status": "..." }
+  ]
+}
+
+If the document text is empty or has no medical content, you MUST return:
 {
   "diagnosis": [],
   "medications": [],
   "labResults": []
 }
-`,
+
+BEGIN EXTRACTION.`,
 });
 
 const extractMedicalDataFlow = ai.defineFlow(
