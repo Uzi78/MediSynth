@@ -5,6 +5,8 @@ import { FirebaseStorage, ref, uploadBytes, getDownloadURL } from "firebase/stor
 
 interface FirebaseServices {
     firestore: Firestore;
+    auth: Auth;
+    storage: FirebaseStorage;
 }
 
 interface UserProfileData {
@@ -24,13 +26,30 @@ export async function updateUserProfile(
     services: FirebaseServices,
     user: User,
     data: { displayName?: string, phoneNumber?: string | null },
+    newImage?: File | null
 ) {
-    const { firestore } = services;
-    const updateData: UserProfileData = {};
+    const { firestore, auth, storage } = services;
+    const authUpdateData: { displayName?: string, photoURL?: string } = {};
+    let imageUrl = user.photoURL;
 
+    // 1. Upload new image if it exists
+    if (newImage) {
+        const imagePath = `profile-pictures/${user.uid}/${newImage.name}`;
+        const imageRef = ref(storage, imagePath);
+        const uploadResult = await uploadBytes(imageRef, newImage);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+        authUpdateData.photoURL = imageUrl;
+    }
+
+    // 2. Update Auth profile
+    if (data.displayName && data.displayName !== user.displayName) {
+        authUpdateData.displayName = data.displayName;
+    }
     
-    // Note: Phone number is not directly updatable via updateProfile from client SDK
-    // It requires a more complex verification flow. We'll store it in Firestore.
+    if (Object.keys(authUpdateData).length > 0) {
+        await updateProfile(user, authUpdateData);
+    }
+    
 
     // 3. Update Firestore user document
     const userDocRef = doc(firestore, 'users', user.uid);
@@ -41,8 +60,8 @@ export async function updateUserProfile(
     if (data.displayName) {
         firestoreUpdate.displayName = data.displayName;
     }
-    if (updateData.photoURL) {
-        firestoreUpdate.photoURL = updateData.photoURL;
+    if (imageUrl) {
+        firestoreUpdate.photoURL = imageUrl;
     }
     if (data.phoneNumber) {
         firestoreUpdate.phoneNumber = data.phoneNumber;

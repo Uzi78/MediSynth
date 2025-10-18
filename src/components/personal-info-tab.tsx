@@ -17,12 +17,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "./ui/card"
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useStorage } from "@/firebase";
 import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/firebase/firestore/users";
+import { useAuth } from "@/firebase";
+
 
 const profileFormSchema = z.object({
   name: z.string(),
@@ -42,6 +44,8 @@ interface UserProfile {
 export function PersonalInfoTab() {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
+    const auth = useAuth();
+    const storage = useStorage();
     const { toast } = useToast();
     
     const [newImage, setNewImage] = useState<File | null>(null);
@@ -79,7 +83,7 @@ export function PersonalInfoTab() {
              form.reset({
                 name: user.displayName || user.email?.split('@')[0] || '',
                 email: user.email || '',
-                phone: '',
+                phone: userProfile?.phoneNumber || '',
             });
             if(user.photoURL) {
                 setImagePreview(user.photoURL);
@@ -97,16 +101,16 @@ export function PersonalInfoTab() {
     };
 
     async function onSubmit(data: ProfileFormValues) {
-        if (!user || !firestore) {
+        if (!user || !firestore || !auth || !storage) {
             toast({ variant: 'destructive', title: 'Error', description: 'Authentication context is not available.' });
             return;
         }
         setIsSubmitting(true);
         try {
-            await updateUserProfile({ firestore }, user, {
+            await updateUserProfile({ firestore, auth, storage }, user, {
                 displayName: data.name,
                 phoneNumber: data.phone
-            });
+            }, newImage);
             
             toast({ title: 'Success', description: 'Your profile has been updated.' });
             setNewImage(null); // Reset after successful upload
@@ -153,7 +157,7 @@ export function PersonalInfoTab() {
                                 <FormItem>
                                 <FormLabel>Full Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Your Name" {...field} disabled />
+                                    <Input placeholder="Your Name" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
