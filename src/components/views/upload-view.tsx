@@ -58,6 +58,21 @@ export default function UploadView() {
             
             const extractedData: ExtractMedicalDataOutput = await extractMedicalData({ documentText: rawText });
             
+            const isExtractionEmpty = 
+              extractedData.diagnosis.length === 0 &&
+              extractedData.medications.length === 0 &&
+              extractedData.labResults.length === 0;
+
+            if (isExtractionEmpty) {
+              toast({
+                variant: "destructive",
+                title: `Processing Failed for ${file.name}`,
+                description: "No medical information could be extracted. The document might be empty or invalid.",
+              });
+              // Stop processing for this file, don't save to DB
+              return; 
+            }
+            
             const tempRecordForSummary = {
               id: fileId,
               date: new Date().toISOString(),

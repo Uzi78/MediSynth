@@ -88,61 +88,131 @@ const extractMedicalDataPrompt = ai.definePrompt({
   output: {schema: ExtractMedicalDataOutputSchema},
   prompt: `You are an expert AI medical data extraction assistant. Your job is to accurately extract structured medical information from raw document text.
 
-IMPORTANT GUIDELINES:
-- Your primary goal is to find and extract information that is present in the document.
-- Do not invent or infer information that is not supported by the text.
-- If the document is blank, empty, or clearly contains no medical information, you MUST return empty arrays for ALL fields.
-- If you cannot find information for a specific section (e.g., no medications are listed), return an empty array for that section.
-- Preserve the exact values, units, and ranges as they appear in the document.
+CRITICAL EXTRACTION RULES:
+1. ONLY extract information that is EXPLICITLY stated in the document
+2. DO NOT infer, assume, or generate any medical information
+3. DO NOT create example, sample, or placeholder data
+4. If information is missing or unclear, leave that field empty
+5. Preserve exact values, units, and ranges as they appear in the document
 
 Document Text:
 {{{documentText}}}
 
-Please extract the following information based on the guidelines above.
+EXTRACTION GUIDELINES:
 
 *DIAGNOSES:*
-- Look for sections like "Diagnosis", "Impression", "Assessment".
-- Extract disease names, conditions, or medical conclusions.
+- Look for sections labeled: "Diagnosis", "Impression", "Assessment", "Clinical Diagnosis"
+- Extract disease names, conditions, or medical conclusions
 - Examples: "Type 2 Diabetes Mellitus", "Hypertension", "Acute Bronchitis"
 
 *MEDICATIONS:*
-- Look for sections like "Medications", "Prescriptions", "Rx", "Treatment".
-- For each medication, find the name, dosage (e.g., "500mg"), and frequency (e.g., "twice daily").
+- Look for sections labeled: "Medications", "Prescriptions", "Rx", "Treatment"
+- Extract three components for each medication:
+  * name: The medication name (e.g., "Metformin", "Lisinopril")
+  * dosage: The amount and unit (e.g., "500mg", "10ml", "2 tablets")
+  * frequency: How often to take it (e.g., "twice daily", "once a day", "every 8 hours", "as needed")
 
-*LAB RESULTS:*
-- Lab results often appear in tables or lists. Look for patterns with a test name, a result value, and a reference range.
-- For each lab test, extract:
-  - test: The name of the test (e.g., "Hemoglobin", "Glucose").
-  - value: The measured result WITH its units (e.g., "14.5 g/dL", "110 mg/dL").
-  - range: The reference/normal range (e.g., "13.0-17.0", "70-100").
-  - status: Determine the status ("Normal", "High", "Low", "Critical") by looking for explicit labels (like H, L, High) or by comparing the value to the provided range.
+*LAB RESULTS (MOST IMPORTANT):*
+Lab reports typically contain test results in tables or lists. Look for these patterns:
+
+Pattern 1 - Tabular format:
+Test Name          Result      Reference Range    Status
+Hemoglobin         14.5 g/dL   13.0-17.0         Normal
+Glucose            110 mg/dL   70-100            High
+
+Pattern 2 - List format:
+- Hemoglobin: 14.5 g/dL (13.0-17.0) Normal
+- Glucose: 110 mg/dL (70-100) High
+- WBC: 7.5 K/uL (4.0-11.0) Normal
+
+Pattern 3 - Inline format:
+Hemoglobin 14.5 (13.0-17.0), Glucose 110H (70-100)
+
+Pattern 4 - Narrative/Inline format (common in medical records):
+"CBC: WBC 6.8 x10^3/µL, Hgb 14.2 g/dL, Hct 42.5%, Platelets 220 x10^3/µL"
+"CMP: Na 140 mmol/L, K 4.1 mmol/L, Creatinine 0.92 mg/dL"
+"Lipids: Total cholesterol 198 mg/dL, LDL 118 mg/dL, HDL 48 mg/dL"
+
+For narrative formats:
+- Look for panel names (CBC, CMP, BMP, Lipid Panel) followed by test results
+- Extract each test-value pair
+- Use standard medical reference ranges if not explicitly stated
+- Determine status based on standard medical ranges
+
+IMPORTANT: If reference ranges are NOT provided in the document:
+- You MAY use widely accepted standard medical reference ranges to populate the "range" field
+- You MUST mark status as "Normal" if within standard range, "High" if above, "Low" if below
+- Common standard ranges:
+  * WBC: 4.0-11.0 x10^3/µL
+  * Hemoglobin (male): 13.5-17.5 g/dL
+  * Hematocrit (male): 38-50%
+  * Platelets: 150-400 x10^3/µL
+  * Sodium: 136-145 mmol/L
+  * Potassium: 3.5-5.0 mmol/L
+  * Creatinine (male): 0.7-1.3 mg/dL
+  * eGFR: >60 mL/min/1.73m²
+  * Total Cholesterol: <200 mg/dL (desirable)
+  * LDL: <100 mg/dL (optimal)
+  * HDL (male): >40 mg/dL
+  * Triglycerides: <150 mg/dL
+
+For EACH lab test, extract:
+- test: The exact name of the test (e.g., "Hemoglobin", "Blood Glucose", "Total Cholesterol")
+- value: The measured result WITH units (e.g., "14.5 g/dL", "110 mg/dL", "7.5 K/uL")
+- range: The reference/normal range (e.g., "13.0-17.0", "70-100 mg/dL", "4.0-11.0 K/uL")
+- status: Determine status based on comparison or explicit markers:
+  * "Normal" - if value is within range or marked as normal/N
+  * "High" - if value exceeds upper limit or marked as high/H/↑
+  * "Low" - if value is below lower limit or marked as low/L/↓
+  * "Critical" - if explicitly marked as critical or severely abnormal
 
 Common Lab Tests to Look For:
 - Complete Blood Count (CBC): Hemoglobin, Hematocrit, WBC, RBC, Platelets
-- Metabolic Panel: Glucose, Sodium, Potassium, Creatinine
+- Metabolic Panel: Glucose, Sodium, Potassium, Chloride, CO2, BUN, Creatinine
 - Lipid Panel: Total Cholesterol, LDL, HDL, Triglycerides
-- Hemoglobin A1c
+- Liver Function: ALT, AST, Alkaline Phosphatase, Bilirubin, Albumin
+- Thyroid: TSH, T3, T4, Free T4
+- Kidney Function: BUN, Creatinine, eGFR
+- Electrolytes: Sodium, Potassium, Calcium, Magnesium
+- Hemoglobin A1c (for diabetes monitoring)
+
+IMPORTANT NOTES:
+- Always include units with values (g/dL, mg/dL, mmol/L, etc.)
+- Preserve the exact format of ranges as they appear
+- If a status indicator (H, L, Normal, High, Low) is present, use it
+- If no status indicator, compare value to range to determine status
+- Handle various unit formats (g/dL, g/L, mg/dL, mmol/L, K/uL, etc.)
 
 OUTPUT FORMAT:
-Return JSON with these exact keys. If a section is empty, its array must be empty.
+Return JSON with these exact keys:
 {
   "diagnosis": ["array of diagnosis strings"],
   "medications": [
-    { "name": "...", "dosage": "...", "frequency": "..." }
+    {
+      "name": "medication name",
+      "dosage": "amount with unit",
+      "frequency": "how often"
+    }
   ],
   "labResults": [
-    { "test": "...", "value": "...", "range": "...", "status": "..." }
+    {
+      "test": "test name",
+      "value": "result with unit",
+      "range": "reference range",
+      "status": "Normal|High|Low|Critical"
+    }
   ]
 }
 
-If the document text is empty or has no medical content, you MUST return:
+If the document contains NO medical information or is blank, return:
 {
   "diagnosis": [],
   "medications": [],
   "labResults": []
 }
 
-BEGIN EXTRACTION.`,
+BEGIN EXTRACTION NOW.
+`,
 });
 
 const extractMedicalDataFlow = ai.defineFlow(
