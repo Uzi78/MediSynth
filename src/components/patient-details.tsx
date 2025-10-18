@@ -36,34 +36,40 @@ export default function PatientDetails({ patient, isLoading }: PatientDetailsPro
     return <EmptyState />;
   }
 
+  // A doctor viewing a patient summary will not have access to detailed records.
+  // The detailed view is only available when the patient has records.
+  const hasDetailedRecords = patient.records && patient.records.length > 0;
+
   return (
     <Card className="h-full shadow-md">
       <div className="p-4 sm:p-6 space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold">{patient.name}</h2>
-            <p className="text-gray-600">{patient.email}</p>
+            {patient.email !== 'N/A' && <p className="text-gray-600">{patient.email}</p>}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === 'summary' ? 'default' : 'outline'}
-              onClick={() => setViewMode('summary')}
-            >
-              Summary
-            </Button>
-            <Button
-              variant={viewMode === 'detailed' ? 'default' : 'outline'}
-              onClick={() => setViewMode('detailed')}
-            >
-              Detailed
-            </Button>
-          </div>
+          {hasDetailedRecords && (
+            <div className="flex items-center gap-2">
+                <Button
+                variant={viewMode === 'summary' ? 'default' : 'outline'}
+                onClick={() => setViewMode('summary')}
+                >
+                Summary
+                </Button>
+                <Button
+                variant={viewMode === 'detailed' ? 'default' : 'outline'}
+                onClick={() => setViewMode('detailed')}
+                >
+                Detailed
+                </Button>
+            </div>
+          )}
         </div>
 
-        {viewMode === 'summary' ? (
-          <SummaryView patient={patient} />
-        ) : (
+        {viewMode === 'detailed' && hasDetailedRecords ? (
           <DetailedView patient={patient} />
+        ) : (
+          <SummaryView patient={patient} />
         )}
       </div>
     </Card>

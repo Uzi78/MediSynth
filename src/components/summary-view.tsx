@@ -11,6 +11,7 @@ export default function SummaryView({ patient }: SummaryViewProps) {
   const latestRecord = records.length > 0 ? records.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b) : null;
   const diagnosesCount = records.flatMap(r => r.extractedData.diagnosis).length;
   const medicationsCount = records.flatMap(r => r.extractedData.medications).length;
+  const recordCount = patient.records?.length ?? (patient as any).recordCount ?? 0;
 
   return (
     <div className="space-y-6">
@@ -21,7 +22,7 @@ export default function SummaryView({ patient }: SummaryViewProps) {
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-900">{diagnosesCount}</div>
+            <div className="text-2xl font-bold text-red-900">{diagnosesCount > 0 ? diagnosesCount : '--'}</div>
           </CardContent>
         </Card>
         <Card className="bg-blue-50 border-blue-200">
@@ -30,7 +31,7 @@ export default function SummaryView({ patient }: SummaryViewProps) {
             <Pill className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{medicationsCount}</div>
+            <div className="text-2xl font-bold text-blue-900">{medicationsCount > 0 ? medicationsCount : '--'}</div>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
@@ -39,7 +40,7 @@ export default function SummaryView({ patient }: SummaryViewProps) {
             <FileText className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">{records.length}</div>
+            <div className="text-2xl font-bold text-green-900">{recordCount}</div>
           </CardContent>
         </Card>
       </div>
@@ -98,6 +99,13 @@ export default function SummaryView({ patient }: SummaryViewProps) {
               ))}
             </div>
         </div>
+      )}
+
+      {!latestRecord && (
+          <div className="text-center py-10 text-gray-500">
+              <p>No detailed record summary available for this patient.</p>
+              <p className="text-sm">Full records can only be viewed by the patient.</p>
+          </div>
       )}
     </div>
   );

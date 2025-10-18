@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import type { DoctorPatient, Record as RecordType } from '@/lib/types';
+import type { DoctorPatient, Patient, Record as RecordType } from '@/lib/types';
 import PatientList from '../patient-list';
 import PatientDetails from '../patient-details';
-import { useFirestore, useUser, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { getDoctorPatients } from '@/firebase/firestore/doctors';
-import { collection, doc, query } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 export default function MyPatientsView() {
     const { user } = useUser();
@@ -22,29 +21,23 @@ export default function MyPatientsView() {
     // Keep track of the selected patient
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     
-    // Fetch the full details of the selected patient
-    const patientDocRef = useMemoFirebase(() => 
-        (selectedPatientId && firestore) ? doc(firestore, 'users', selectedPatientId, 'patients', selectedPatientId) : null, 
-        [selectedPatientId, firestore]
-    );
-    const { data: selectedPatient, isLoading: isLoadingPatientDetails } = useDoc<any>(patientDocRef);
-
-    // Fetch the records for the selected patient
-    const patientRecordsRef = useMemoFirebase(() =>
-        (selectedPatientId && firestore) ? collection(firestore, 'users', selectedPatientId, 'patients', selectedPatientId, 'records') : null,
-        [selectedPatientId, firestore]
-    );
-    const { data: records, isLoading: isLoadingRecords } = useCollection<RecordType>(patientRecordsRef);
-    
     // Automatically select the first patient in the list if none is selected
     if (!selectedPatientId && doctorPatients && doctorPatients.length > 0) {
         setSelectedPatientId(doctorPatients[0].id);
     }
     
-    const fullPatientDetails = selectedPatient && records ? {
-        ...selectedPatient,
-        id: selectedPatientId,
-        records: records,
+    const selectedPatientSummary = doctorPatients?.find(p => p.id === selectedPatientId);
+
+    // Create a Patient object from the DoctorPatient summary data
+    // NOTE: The 'records' array is empty because doctors do not have access to the patient's full record history.
+    // The UI should handle this gracefully.
+    const patientDetails: Patient | null = selectedPatientSummary ? {
+        id: selectedPatientSummary.id,
+        name: selectedPatientSummary.name,
+        age: selectedPatientSummary.age,
+        gender: selectedPatientSummary.gender,
+        email: 'N/A', // Email is private and not available in the doctor's summary view
+        records: [], // Doctors view summaries, not the full record list.
     } : null;
 
     return (
@@ -59,8 +52,8 @@ export default function MyPatientsView() {
             </div>
             <div className="lg:col-span-8 xl:col-span-9">
                 <PatientDetails 
-                  patient={fullPatientDetails} 
-                  isLoading={isLoadingPatientDetails || isLoadingRecords}
+                  patient={patientDetails} 
+                  isLoading={isLoadingPatients}
                 />
             </div>
         </div>
