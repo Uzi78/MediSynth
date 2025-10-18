@@ -20,6 +20,7 @@ export interface Vitals {
 
 export interface Record {
   id: string;
+  patientId: string;
   date: string; // YYYY-MM-DD
   type: string;
   status: 'processing' | 'completed';
