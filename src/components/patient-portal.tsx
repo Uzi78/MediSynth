@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, type DragEvent, type ChangeEvent, type Dispatch, type SetStateAction, useEffect } from 'react';
+import { useState, useRef, type DragEvent, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -62,14 +62,14 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
     recordsRef ? query(recordsRef, orderBy('date', 'desc')) : null
   , [recordsRef]);
 
-  const { data: records, isLoading: isLoadingRecords } = useCollection<RecordType>(recordsQuery);
-
-  useEffect(() => {
-    // When records load, if no record is selected, select the most recent one.
-    if (!isLoadingRecords && records && records.length > 0 && !selectedRecord) {
-      setSelectedRecord(records[0]);
-    }
-  }, [records, isLoadingRecords, selectedRecord]);
+  const { data: records, isLoading: isLoadingRecords } = useCollection<RecordType>(recordsQuery, {
+      onData: (data) => {
+        // When records load for the first time, if no record is selected, select the most recent one.
+        if (data && data.length > 0 && !selectedRecord) {
+            setSelectedRecord(data[0]);
+        }
+      }
+  });
 
 
   const processFiles = async (files: FileList) => {
