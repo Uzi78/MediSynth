@@ -1,7 +1,7 @@
 'use client';
 
 import { Dispatch, SetStateAction } from 'react';
-import { LayoutDashboard, Users, ClipboardPlus, Video, User, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardPlus, CalendarCheck, User, MessageSquare } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +13,7 @@ interface SidebarProps {
 const mainNavItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'patients', label: 'My Patients', icon: Users },
-  { id: 'consultations', label: 'Consultations', icon: Video },
+  { id: 'consultations', label: 'Consultations', icon: CalendarCheck },
   { id: 'prescription', label: 'Write Prescription', icon: ClipboardPlus },
   { id: 'messages', label: 'Message Patient', icon: MessageSquare },
 ];

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useUser } from '@/firebase';
 import { format } from 'date-fns';
-import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, VideoIcon, PlusCircle } from 'lucide-react';
+import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, CalendarCheck } from 'lucide-react';
 import type { ConsultationRequest, RecentMessage } from '@/lib/types';
 
 
@@ -97,7 +97,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     <p className="text-md text-gray-500">{currentDate}</p>
                 </div>
                 <div className='flex items-center gap-2'>
-                    <Button onClick={() => setActiveView('consultations')}><VideoIcon /> Start Video Consultation</Button>
+                    <Button onClick={() => setActiveView('consultations')}><CalendarCheck /> Start Consultation</Button>
                     <Button variant="outline" onClick={() => setActiveView('prescription')}><ClipboardPlus /> Write Prescription</Button>
                     <Button variant="outline" onClick={() => setActiveView('messages')}><Send /> Message Patient</Button>
                 </div>
@@ -122,7 +122,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                 <Card className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-green-800">Pending Consultations</CardTitle>
-                        <Video className="h-5 w-5 text-green-600" />
+                        <CalendarCheck className="h-5 w-5 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-green-900">{mockConsultationRequests.length}</div>

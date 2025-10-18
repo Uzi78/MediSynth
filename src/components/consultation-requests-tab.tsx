@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Check, Phone, X } from "lucide-react";
+import { Check, CalendarCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const getUrgencyBadgeClass = (urgency: 'High' | 'Medium' | 'Low') => {
@@ -46,7 +46,7 @@ export function ConsultationRequestsTab() {
                                     <Check className="w-4 h-4 mr-1" /> Accept
                                 </Button>
                                 <Button size="sm">
-                                    <Phone className="w-4 h-4 mr-1" /> Start Now
+                                    <CalendarCheck className="w-4 h-4 mr-1" /> Start Now
                                 </Button>
                             </div>
                         </div>

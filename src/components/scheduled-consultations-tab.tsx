@@ -5,7 +5,7 @@ import { mockScheduledConsultations } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Phone, Clock } from "lucide-react";
+import { CalendarCheck, Clock } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 
 const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
@@ -51,7 +51,7 @@ export function ScheduledConsultationsTab() {
                         <div className="flex flex-col items-end gap-2">
                            <CountdownTimer targetDate={consult.scheduledTime} />
                             <Button className="mt-2">
-                                <Phone className="w-4 h-4 mr-2" /> Join Call
+                                <CalendarCheck className="w-4 h-4 mr-2" /> View Consultation
                             </Button>
                         </div>
                     </CardContent>
