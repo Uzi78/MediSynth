@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "./ui/card"
-import { useUser, useFirebase } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -31,24 +32,61 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
+interface UserProfile {
+    role: 'patient' | 'doctor';
+    displayName?: string;
+    photoURL?: string;
+    phoneNumber?: string;
+}
+
 export function PersonalInfoTab() {
-    const { user } = useUser();
-    const { auth, firestore, storage } = useFirebase();
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
     const { toast } = useToast();
     
     const [newImage, setNewImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(user?.photoURL || null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const userProfileRef = useMemoFirebase(() => 
+        (user && firestore) ? doc(firestore, 'users', user.uid) : null,
+        [user, firestore]
+    );
+
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileFormSchema),
         defaultValues: {
-            name: user?.displayName || user?.email?.split('@')[0] || '',
-            email: user?.email || '',
-            phone: '', // This should be fetched from Firestore if available
+            name: '',
+            email: '',
+            phone: '',
         },
         mode: "onChange",
     })
+
+    useEffect(() => {
+        if (user && userProfile) {
+            form.reset({
+                name: userProfile.displayName || user.displayName || user.email?.split('@')[0] || '',
+                email: user.email || '',
+                phone: userProfile.phoneNumber || '',
+            });
+            if(userProfile.photoURL) {
+                setImagePreview(userProfile.photoURL);
+            }
+        } else if (user) {
+             form.reset({
+                name: user.displayName || user.email?.split('@')[0] || '',
+                email: user.email || '',
+                phone: '',
+            });
+            if(user.photoURL) {
+                setImagePreview(user.photoURL);
+            }
+        }
+    }, [user, userProfile, form]);
+
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -59,18 +97,16 @@ export function PersonalInfoTab() {
     };
 
     async function onSubmit(data: ProfileFormValues) {
-        if (!user || !auth || !firestore || !storage) {
+        if (!user || !firestore) {
             toast({ variant: 'destructive', title: 'Error', description: 'Authentication context is not available.' });
             return;
         }
         setIsSubmitting(true);
         try {
-            await updateUserProfile({
-                auth, firestore, storage
-            }, user, {
+            await updateUserProfile({ firestore }, user, {
                 displayName: data.name,
                 phoneNumber: data.phone
-            }, newImage);
+            });
             
             toast({ title: 'Success', description: 'Your profile has been updated.' });
             setNewImage(null); // Reset after successful upload
@@ -81,6 +117,10 @@ export function PersonalInfoTab() {
         }
     }
   
+    if (isUserLoading || isProfileLoading) {
+        return <p>Loading profile...</p>
+    }
+
     return (
     <Card className="mt-6 border-0 shadow-none">
         <CardContent>
@@ -113,7 +153,7 @@ export function PersonalInfoTab() {
                                 <FormItem>
                                 <FormLabel>Full Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Your Name" {...field} />
+                                    <Input placeholder="Your Name" {...field} disabled />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

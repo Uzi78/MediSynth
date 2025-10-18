@@ -4,9 +4,7 @@ import { Firestore, doc, setDoc } from "firebase/firestore";
 import { FirebaseStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface FirebaseServices {
-    auth: Auth;
     firestore: Firestore;
-    storage: FirebaseStorage;
 }
 
 interface UserProfileData {
@@ -26,23 +24,10 @@ export async function updateUserProfile(
     services: FirebaseServices,
     user: User,
     data: { displayName?: string, phoneNumber?: string | null },
-    newImage?: File | null
 ) {
-    const { auth, firestore, storage } = services;
+    const { firestore } = services;
     const updateData: UserProfileData = {};
 
-    // 1. Upload new image if provided
-    if (newImage) {
-        const storageRef = ref(storage, `profile-pictures/${user.uid}/${newImage.name}`);
-        await uploadBytes(storageRef, newImage);
-        updateData.photoURL = await getDownloadURL(storageRef);
-    }
-
-    // 2. Update Firebase Auth profile
-    await updateProfile(user, {
-        displayName: data.displayName,
-        photoURL: updateData.photoURL || user.photoURL,
-    });
     
     // Note: Phone number is not directly updatable via updateProfile from client SDK
     // It requires a more complex verification flow. We'll store it in Firestore.
