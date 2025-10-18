@@ -52,6 +52,8 @@ export interface ConsultationRequest {
         avatarUrl: string;
     };
     requestedTime: string;
+    complaint: string;
+    urgency: 'High' | 'Medium' | 'Low';
 }
 
 export interface RecentMessage {

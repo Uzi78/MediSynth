@@ -1,4 +1,4 @@
-import type { Patient } from './types';
+import type { Patient, ConsultationRequest, RecentMessage } from './types';
 
 export const mockPatients: Patient[] = [
   {
@@ -87,4 +87,76 @@ Rx:
     email: 'fatima.ali@example.com',
     records: [],
   },
+];
+
+export const mockConsultationRequests: ConsultationRequest[] = [
+    {
+      id: 'cr001',
+      patient: { name: 'Ali Hassan', age: 34, gender: 'M', avatarUrl: 'https://i.pravatar.cc/150?u=ali' },
+      requestedTime: '10:00 AM',
+      complaint: "Persistent cough and fever for 3 days.",
+      urgency: 'High',
+    },
+    {
+      id: 'cr002',
+      patient: { name: 'Fatima Ahmed', age: 28, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=fatima' },
+      requestedTime: '11:30 AM',
+      complaint: "Follow-up for seasonal allergies.",
+      urgency: 'Low',
+    },
+    {
+        id: 'cr003',
+        patient: { name: 'Zainab Omar', age: 45, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=zainab' },
+        requestedTime: '2:00 PM',
+        complaint: "Mild headache and fatigue.",
+        urgency: 'Medium',
+    },
+];
+
+export const mockScheduledConsultations: any[] = [
+    {
+        id: 'sc001',
+        patient: { name: 'Yusuf Ibrahim', age: 52, gender: 'M', avatarUrl: 'https://i.pravatar.cc/150?u=yusuf' },
+        scheduledTime: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // 2 hours from now
+        complaint: 'Medication refill request'
+    },
+    {
+        id: 'sc002',
+        patient: { name: 'Aisha Khan', age: 29, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=aisha' },
+        scheduledTime: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // Tomorrow
+        complaint: 'Review of recent lab results'
+    }
+]
+  
+export const mockRecentMessages: RecentMessage[] = [
+    {
+      id: 'msg001',
+      patient: { name: 'Yusuf Ibrahim', avatarUrl: 'https://i.pravatar.cc/150?u=yusuf' },
+      preview: 'Thank you, doctor. I am feeling much better now.',
+      time: '10:45 AM',
+    },
+    {
+      id: 'msg002',
+      patient: { name: 'Aisha Khan', avatarUrl: 'https://i.pravatar.cc/150?u=aisha' },
+      preview: 'I have a question about the new prescription...',
+      time: '9:30 AM',
+    },
+    {
+        id: 'msg003',
+        patient: { name: 'Bilal Ahmed', avatarUrl: 'https://i.pravatar.cc/150?u=bilal' },
+        preview: 'Is it normal to experience this side effect?',
+        time: 'Yesterday',
+    },
+    {
+        id: 'msg004',
+        patient: { name: 'Maryam Khalid', avatarUrl: 'https://i.pravatar.cc/150?u=maryam' },
+        preview: 'Just checking in for my appointment tomorrow.',
+        time: 'Yesterday',
+    },
+    {
+        id: 'msg005',
+        patient: { name: 'Omar Farooq', avatarUrl: 'https://i.pravatar.cc/150?u=omar' },
+        preview: 'The pharmacy needs a confirmation for the refill.',
+        time: '2 days ago',
+    },
 ];
