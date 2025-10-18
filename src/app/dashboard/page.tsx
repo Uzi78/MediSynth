@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/header';
 import PatientSidebar from '@/components/patient-sidebar';
@@ -84,7 +84,7 @@ export default function DashboardPage() {
     const renderContent = () => {
       switch (activeDoctorView) {
         case 'dashboard':
-          return <DoctorDashboardView />;
+          return <DoctorDashboardView setActiveView={setActiveDoctorView} />;
         case 'patients':
           return <MyPatientsView />;
         case 'consultations':
@@ -96,7 +96,7 @@ export default function DashboardPage() {
         case 'profile':
             return <DoctorProfileView />;
         default:
-          return <DoctorDashboardView />;
+          return <DoctorDashboardView setActiveView={setActiveDoctorView} />;
       }
     };
 

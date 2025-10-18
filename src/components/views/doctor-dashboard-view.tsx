@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,16 +16,22 @@ const mockConsultationRequests: ConsultationRequest[] = [
       id: 'cr001',
       patient: { name: 'Ali Hassan', age: 34, gender: 'M', avatarUrl: 'https://i.pravatar.cc/150?u=ali' },
       requestedTime: '10:00 AM',
+      complaint: 'Fever and cough',
+      urgency: 'High',
     },
     {
       id: 'cr002',
       patient: { name: 'Fatima Ahmed', age: 28, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=fatima' },
       requestedTime: '11:30 AM',
+      complaint: 'Follow-up for allergies',
+      urgency: 'Low',
     },
     {
         id: 'cr003',
         patient: { name: 'Zainab Omar', age: 45, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=zainab' },
         requestedTime: '2:00 PM',
+        complaint: 'Mild headache',
+        urgency: 'Medium',
     },
 ];
   
@@ -62,7 +68,11 @@ const mockRecentMessages: RecentMessage[] = [
     },
 ];
 
-export default function DoctorDashboardView() {
+interface DoctorDashboardViewProps {
+    setActiveView: Dispatch<SetStateAction<string>>;
+}
+
+export default function DoctorDashboardView({ setActiveView }: DoctorDashboardViewProps) {
     const { user } = useUser();
     const [currentDate, setCurrentDate] = useState('');
 
@@ -87,9 +97,9 @@ export default function DoctorDashboardView() {
                     <p className="text-md text-gray-500">{currentDate}</p>
                 </div>
                 <div className='flex items-center gap-2'>
-                    <Button><VideoIcon /> Start Video Consultation</Button>
-                    <Button variant="outline"><ClipboardPlus /> Write Prescription</Button>
-                    <Button variant="outline"><Send /> Message Patient</Button>
+                    <Button onClick={() => setActiveView('consultations')}><VideoIcon /> Start Video Consultation</Button>
+                    <Button variant="outline" onClick={() => setActiveView('prescription')}><ClipboardPlus /> Write Prescription</Button>
+                    <Button variant="outline" onClick={() => setActiveView('messages')}><Send /> Message Patient</Button>
                 </div>
             </div>
             
