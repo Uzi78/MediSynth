@@ -3,7 +3,7 @@ import { collection, addDoc, serverTimestamp, Firestore } from 'firebase/firesto
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { generateConciseSummary } from '@/ai/flows/generate-concise-summary';
-import type { Prescription, Record } from '@/lib/types';
+import type { Prescription, Record as RecordType } from '@/lib/types';
 
 /**
  * Creates a new prescription record in the patient's subcollection.
@@ -27,7 +27,9 @@ export async function sendPrescriptionToPatient(
         frequency: `${med.dosage}, ${med.frequency} for ${med.duration}`
     }));
 
-    const recordForSummary: Partial<Record> = {
+    const recordForSummary: Omit<RecordType, 'patientId' | 'rawDocument' | 'summary'> = {
+        id: crypto.randomUUID(), // Add a temporary ID for validation
+        status: 'processing', // Add a status for validation
         date: new Date().toISOString(),
         type: 'Prescription',
         extractedData: {
@@ -40,7 +42,7 @@ export async function sendPrescriptionToPatient(
     // Generate a summary for the new record
     const { summary } = await generateConciseSummary({ record: recordForSummary as any });
     
-    const newRecord: Omit<Record, 'id'> = {
+    const newRecord: Omit<RecordType, 'id'> = {
         patientId: patientId,
         date: new Date().toISOString(),
         type: "Prescription",
