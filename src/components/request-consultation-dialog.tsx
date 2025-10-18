@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { DoctorProfile } from '@/lib/types';
-import { assessSymptoms, AssessSymptomsOutput } from '@/ai/flows/assess-symptoms';
 import { createConsultationRequest } from '@/firebase/firestore/patient';
 import { useUser, useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -21,14 +20,11 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Zap, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const requestSchema = z.object({
   complaint: z.string().min(10, 'Please describe your complaint in at least 10 characters.'),
+  urgency: z.enum(['Urgent', 'Moderate', 'Routine']),
 });
 
 type RequestFormValues = z.infer<typeof requestSchema>;
@@ -37,48 +33,30 @@ interface RequestConsultationDialogProps {
   doctor: DoctorProfile | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialComplaint?: string;
 }
 
-const getUrgencyBadgeClass = (urgency: 'High' | 'Medium' | 'Low') => {
-    switch (urgency) {
-      case 'High': return 'bg-red-100 text-red-800 border-red-300';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'Low': return 'bg-blue-100 text-blue-800 border-blue-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-export function RequestConsultationDialog({ doctor, open, onOpenChange }: RequestConsultationDialogProps) {
-  const [step, setStep] = useState<'form' | 'assessing' | 'results'>('form');
-  const [assessment, setAssessment] = useState<AssessSymptomsOutput | null>(null);
+export function RequestConsultationDialog({ doctor, open, onOpenChange, initialComplaint }: RequestConsultationDialogProps) {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestSchema),
-    defaultValues: { complaint: '' },
+    defaultValues: { 
+        complaint: initialComplaint || '',
+        urgency: 'Routine',
+    },
   });
-  
-  const handleFormSubmit = async (data: RequestFormValues) => {
-    setStep('assessing');
-    try {
-      const result = await assessSymptoms({ complaint: data.complaint });
-      setAssessment(result);
-      setStep('results');
-    } catch (error) {
-      console.error('AI assessment failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI Assessment Failed',
-        description: 'Could not assess symptoms. Please try again.',
-      });
-      setStep('form');
-    }
-  };
 
-  const handleRequestSubmit = async () => {
-    if (!doctor || !user || !firestore || !assessment) return;
+  useEffect(() => {
+    if (initialComplaint) {
+        form.setValue('complaint', initialComplaint);
+    }
+  }, [initialComplaint, form]);
+
+  const handleRequestSubmit = async (data: RequestFormValues) => {
+    if (!doctor || !user || !firestore) return;
 
     try {
         await createConsultationRequest(firestore, {
@@ -88,8 +66,8 @@ export function RequestConsultationDialog({ doctor, open, onOpenChange }: Reques
             patientAge: 30, // Placeholder
             patientGender: 'Not specified', // Placeholder
             doctorId: doctor.id,
-            complaint: form.getValues('complaint'),
-            urgency: assessment.urgency,
+            complaint: data.complaint,
+            urgency: data.urgency as 'High' | 'Medium' | 'Low',
         });
 
         toast({
@@ -108,11 +86,8 @@ export function RequestConsultationDialog({ doctor, open, onOpenChange }: Reques
 
   const handleClose = () => {
     onOpenChange(false);
-    // Reset state after a short delay to allow for closing animation
     setTimeout(() => {
         form.reset();
-        setStep('form');
-        setAssessment(null);
     }, 300);
   };
 
@@ -124,78 +99,73 @@ export function RequestConsultationDialog({ doctor, open, onOpenChange }: Reques
         <DialogHeader>
           <DialogTitle>Request Consultation with Dr. {doctor.name}</DialogTitle>
           <DialogDescription>
-            {step === 'form' && 'Describe your symptoms to get started.'}
-            {step === 'assessing' && 'Our AI is assessing your symptoms...'}
-            {step === 'results' && 'Review the AI assessment and submit your request.'}
+            Confirm your details and submit your request.
           </DialogDescription>
         </DialogHeader>
 
-        {step === 'form' && (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="complaint"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Chief Complaint</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="e.g., 'I have a persistent cough and a slight fever for the past 3 days...'"
-                        className="min-h-[150px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-                <Button type="submit">
-                  <Zap className="mr-2 h-4 w-4" /> Run AI Symptom Checker
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        )}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleRequestSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="complaint"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Chief Complaint</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="e.g., 'I have a persistent cough and a slight fever for the past 3 days...'"
+                      className="min-h-[150px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {step === 'assessing' && (
-            <div className="flex flex-col items-center justify-center space-y-4 p-8">
-                <Zap className="h-12 w-12 text-primary animate-pulse" />
-                <p className="text-lg font-medium">Analyzing your complaint...</p>
-                <p className="text-sm text-gray-500 text-center">The AI is assessing potential urgency and related conditions. This is not a medical diagnosis.</p>
-            </div>
-        )}
+            <FormField
+              control={form.control}
+              name="urgency"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel>Preferred Urgency</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-1"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Routine" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Routine</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Moderate" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Moderate</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Urgent" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Urgent</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {step === 'results' && assessment && (
-            <div className='space-y-4'>
-                <Alert variant={assessment.urgency === 'High' ? 'destructive' : 'default'}>
-                    {assessment.urgency === 'High' ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                    <AlertTitle>AI Triage Assessment</AlertTitle>
-                    <AlertDescription>
-                        Based on your complaint, the AI has assessed the urgency level. This is for informational purposes only.
-                    </AlertDescription>
-                </Alert>
-                <div className='p-4 border rounded-lg space-y-4'>
-                    <div className='flex justify-between items-center'>
-                        <h4 className='font-semibold'>Assessed Urgency:</h4>
-                        <Badge className={cn('text-base', getUrgencyBadgeClass(assessment.urgency))}>{assessment.urgency}</Badge>
-                    </div>
-                     <Separator />
-                    <div>
-                        <h4 className='font-semibold mb-2'>Possible Related Conditions:</h4>
-                        <div className="flex flex-wrap gap-2">
-                            {assessment.suggestedConditions.map((cond, i) => <Badge key={i} variant="secondary">{cond}</Badge>)}
-                        </div>
-                    </div>
-                </div>
-                 <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setStep('form')}>Back</Button>
-                    <Button type="button" onClick={handleRequestSubmit}>Submit Request to Doctor</Button>
-                </DialogFooter>
-            </div>
-        )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
+              <Button type="submit">Submit Request</Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

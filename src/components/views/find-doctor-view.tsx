@@ -82,7 +82,11 @@ function DoctorSearchSkeleton() {
     );
 }
 
-export default function FindDoctorView() {
+interface FindDoctorViewProps {
+    initialComplaint?: string;
+}
+
+export default function FindDoctorView({ initialComplaint }: FindDoctorViewProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedDoctor, setSelectedDoctor] = useState<DoctorProfile | null>(null);
@@ -148,6 +152,7 @@ export default function FindDoctorView() {
             doctor={selectedDoctor}
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
+            initialComplaint={initialComplaint}
         />
         </>
     );

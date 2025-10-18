@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/header';
 import PatientSidebar from '@/components/patient-sidebar';
 import DoctorSidebar from '@/components/doctor-sidebar';
@@ -15,6 +15,7 @@ import ConsultationsView from '@/components/views/consultations-view';
 import WritePrescriptionView from '@/components/views/write-prescription-view';
 import DoctorProfileView from '@/components/views/doctor-profile-view';
 import MessagePatientView from '@/components/views/message-patient-view';
+import SymptomCheckerView from '@/components/views/symptom-checker-view';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card } from '@/components/ui/card';
@@ -26,8 +27,13 @@ interface UserProfile {
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const firestore = useFirestore();
-  const [activePatientView, setActivePatientView] = useState('upload');
+
+  const initialPatientView = searchParams.get('view') || 'upload';
+  const initialComplaint = searchParams.get('complaint') || undefined;
+
+  const [activePatientView, setActivePatientView] = useState(initialPatientView);
   const [activeDoctorView, setActiveDoctorView] = useState('dashboard');
 
   const userProfileRef = useMemoFirebase(() => 
@@ -41,6 +47,13 @@ export default function DashboardPage() {
       router.push('/');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+     const view = searchParams.get('view');
+     if (view) {
+        setActivePatientView(view);
+     }
+  }, [searchParams]);
 
   if (isUserLoading || !user || isProfileLoading) {
     return (
@@ -59,8 +72,10 @@ export default function DashboardPage() {
             return <HistoryView />;
           case 'report':
             return <ReportView />;
+          case 'symptom-checker':
+            return <SymptomCheckerView setActiveView={setActivePatientView} />;
           case 'find-doctor':
-            return <FindDoctorView />;
+            return <FindDoctorView initialComplaint={initialComplaint} />;
           default:
             return <UploadView />;
         }
