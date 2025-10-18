@@ -68,6 +68,16 @@ export interface Consultation {
     scheduledFor?: string; // ISO String
 }
 
+export interface Message {
+  id: string;
+  senderId: string;
+  senderRole: 'patient' | 'doctor';
+  text: string;
+  timestamp: {
+    seconds: number;
+    nanoseconds: number;
+  } | null;
+}
 
 export interface RecentMessage {
     id: string;

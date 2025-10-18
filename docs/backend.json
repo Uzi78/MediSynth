@@ -128,6 +128,18 @@
         "bio": { "type": "string" }
       },
       "required": ["name", "specialty", "location", "experience", "consultationFee", "education"]
+    },
+    "Message": {
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a consultation chat.",
+      "properties": {
+        "senderId": { "type": "string", "description": "The UID of the user who sent the message." },
+        "senderRole": { "type": "string", "enum": ["patient", "doctor"], "description": "The role of the sender." },
+        "text": { "type": "string", "description": "The content of the message." },
+        "timestamp": { "type": "object", "description": "The server timestamp when the message was sent." }
+      },
+      "required": ["senderId", "senderRole", "text", "timestamp"]
     }
   },
   "auth": {
@@ -181,6 +193,14 @@
             "entityName": "Consultation",
             "schema": { "$ref": "#/backend/entities/Consultation" },
             "description": "Stores consultation requests and their status."
+        }
+      },
+      {
+        "path": "/consultations/{consultationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/backend/entities/Message" },
+          "description": "Stores the chat messages for a specific consultation."
         }
       }
     ]
