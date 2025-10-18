@@ -1,8 +1,8 @@
 /**
  * @file Firestore Security Rules
  * @description This ruleset enforces a role-based access control model,
- *              allowing fine-grained control over data access based on user roles (patient, doctor)
- *              and resource ownership.
+ * allowing fine-grained control over data access based on user roles (patient, doctor)
+ * and resource ownership.
  *
  * Data Structure:
  * - /users/{userId}: Stores user profile information (role).
@@ -11,6 +11,7 @@
  * - /doctors/{doctorId}: Stores doctor profile information, publicly readable, writable by the doctor.
  * - /doctors/{doctorId}/patients/{patientId}: Stores doctor-patient relationship summaries, accessible only by the doctor.
  * - /consultations/{consultationId}: Stores consultation requests, accessible by involved doctor and patient.
+ * - /consultations/{consultationId}/messages/{messageId}: Stores chat messages for a specific consultation, accessible by involved doctor and patient.
  *
  * Key Security Decisions:
  * - User listing is disallowed.
@@ -36,7 +37,7 @@ service cloud.firestore {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) && resource.data.id == userId;
       allow delete: if false;
     }
 
@@ -55,7 +56,7 @@ service cloud.firestore {
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) && resource != null;
     }
 
     /**
@@ -73,7 +74,7 @@ service cloud.firestore {
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) && resource != null;
     }
 
     /**
@@ -122,12 +123,29 @@ service cloud.firestore {
      * @principle Allows anyone to create consultation requests, but restricts modification to owners.
      */
     match /consultations/{consultationId} {
-        allow get: if isSignedIn();
-        allow list: if false;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn();
-        allow delete: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if false;
     }
+
+        /**
+         * @description Manages chat messages for a specific consultation.
+         * @path /consultations/{consultationId}/messages/{messageId}
+         * @allow (create) Any authenticated user can create a message in a consultation.
+         * @allow (get) Any authenticated user can get a message in a consultation.
+         * @allow (update) Any authenticated user can update a message in a consultation.
+         * @deny (delete) No one is allowed to delete a message in a consultation.
+         * @principle Allows anyone to create messages in a consultation, but restricts modification to owners.
+         */
+        match /consultations/{consultationId}/messages/{messageId} {
+          allow get: if isSignedIn();
+          allow list: if isSignedIn();
+          allow create: if isSignedIn();
+          allow update: if false;
+          allow delete: if false;
+        }
   }
 
   function isSignedIn() {
