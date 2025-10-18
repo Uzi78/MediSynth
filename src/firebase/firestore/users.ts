@@ -28,8 +28,8 @@ export async function updateUserProfile(
     data: { displayName?: string, phoneNumber?: string | null },
     newImage?: File | null
 ) {
-    const { firestore, storage } = services;
-    const updateData: UserProfileData = { ...data };
+    const { auth, firestore, storage } = services;
+    const updateData: UserProfileData = {};
 
     // 1. Upload new image if provided
     if (newImage) {
