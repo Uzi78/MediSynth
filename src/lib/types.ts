@@ -63,3 +63,14 @@ export interface RecentMessage {
     preview: string;
     time: string;
 }
+
+export interface DoctorPatient {
+    id: string;
+    name: string;
+    age: number;
+    gender: 'M' | 'F';
+    avatarUrl: string;
+    conditions: string[];
+    lastInteraction: string;
+    status: 'Active' | 'Inactive' | 'New';
+}

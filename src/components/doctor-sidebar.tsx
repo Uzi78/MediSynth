@@ -1,7 +1,7 @@
 'use client';
 
 import { Dispatch, SetStateAction } from 'react';
-import { Upload, History, FileText } from 'lucide-react';
+import { LayoutDashboard, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 
@@ -11,12 +11,11 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: 'upload', label: 'Upload New Document', icon: Upload },
-  { id: 'history', label: 'View History', icon: History },
-  { id: 'report', label: 'Consolidated Report', icon: FileText },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'patients', label: 'My Patients', icon: Users },
 ];
 
-export default function PatientSidebar({ activeView, setActiveView }: SidebarProps) {
+export default function DoctorSidebar({ activeView, setActiveView }: SidebarProps) {
   return (
     <aside className="w-64 flex-shrink-0 border-r bg-white p-4">
       <nav className="flex flex-col gap-2">
