@@ -88,7 +88,7 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="min-h-screen w-full flex flex-col bg-secondary/50">
+        <div className="min-h-screen w-full flex flex-col bg-muted">
            <div className="p-4 sm:p-6 lg:p-8 border-b bg-background">
              <Header />
            </div>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
     };
 
     return (
-      <div className="min-h-screen w-full flex flex-col bg-secondary/50">
+      <div className="min-h-screen w-full flex flex-col bg-muted">
         <div className="p-4 sm:p-6 lg:p-8 border-b bg-background">
           <Header />
         </div>
