@@ -54,12 +54,14 @@ const extractMedicalDataPrompt = ai.definePrompt({
   Document Text:
   {{{documentText}}}
 
+  IMPORTANT: If the document text is empty or contains no relevant medical information, you MUST return empty arrays for all fields. Do not hallucinate data.
+
   Return the extracted information in JSON format. The JSON should have the following keys:
   - diagnosis: A list of diagnoses.
   - medications: A list of medications, where each medication has a name, dosage, and frequency.
   - labResults: A list of lab results, where each result has a test, value, range, and status.
   
-  If a field is not present in the document, return an empty array or object for it. Do not hallucinate data.
+  If a field is not present in the document, return an empty array or object for it.
   Follow the schema descriptions for each of the fields.
   `,
 });
