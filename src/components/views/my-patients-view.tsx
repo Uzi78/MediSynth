@@ -25,8 +25,6 @@ export default function MyPatientsView() {
         }
     });
 
-    // Fetch records for the selected patient
-    // Note: The security rule for this path will check for an accepted consultation.
     const patientRecordsCollectionRef = useMemoFirebase(() =>
         (user && firestore && selectedPatientId) ? collection(firestore, 'users', selectedPatientId, 'patients', selectedPatientId, 'records') : null,
         [user, firestore, selectedPatientId]
@@ -41,7 +39,7 @@ export default function MyPatientsView() {
         name: selectedPatientSummary.name,
         age: selectedPatientSummary.age,
         gender: selectedPatientSummary.gender,
-        email: 'N/A', // Email is not available in the summary view
+        email: 'N/A', 
         records: patientRecords || [],
         recordCount: patientRecords?.length ?? selectedPatientSummary.recordCount,
     } : null;
@@ -58,7 +56,8 @@ export default function MyPatientsView() {
             </div>
             <div className="lg:col-span-8 xl:col-span-9">
                 <PatientDetails 
-                  patient={patientDetails} 
+                  patient={patientDetails}
+                  records={patientRecords}
                   isLoading={isLoadingPatients || (selectedPatientId ? isLoadingRecords : false)}
                 />
             </div>

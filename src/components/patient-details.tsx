@@ -1,22 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import type { Patient } from '@/lib/types';
-import SummaryView from './summary-view';
-import DetailedView from './detailed-view';
+import type { Patient, Record as RecordType } from '@/lib/types';
 import EmptyState from './empty-state';
-import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Skeleton } from './ui/skeleton';
+import ConsolidatedReport from './consolidated-report';
 
 interface PatientDetailsProps {
   patient: Patient | null;
+  records: RecordType[] | null;
   isLoading: boolean;
 }
 
-export default function PatientDetails({ patient, isLoading }: PatientDetailsProps) {
-  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
-
+export default function PatientDetails({ patient, records, isLoading }: PatientDetailsProps) {
   if (isLoading) {
     return (
         <Card className="h-full shadow-md p-6">
@@ -36,42 +32,15 @@ export default function PatientDetails({ patient, isLoading }: PatientDetailsPro
     return <EmptyState />;
   }
 
-  // A doctor viewing a patient summary will not have access to detailed records.
-  // The detailed view is only available when the patient has records.
-  const hasDetailedRecords = patient.records && patient.records.length > 0;
-
   return (
     <Card className="h-full shadow-md">
-      <div className="p-4 sm:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+       <div className="p-4 sm:p-6 space-y-6">
           <div>
             <h2 className="text-2xl font-bold">{patient.name}</h2>
-            {patient.email !== 'N/A' && <p className="text-gray-600">{patient.email}</p>}
+            <p className="text-gray-600">{patient.age} years old, {patient.gender}</p>
           </div>
-          {hasDetailedRecords && (
-            <div className="flex items-center gap-2">
-                <Button
-                variant={viewMode === 'summary' ? 'default' : 'outline'}
-                onClick={() => setViewMode('summary')}
-                >
-                Summary
-                </Button>
-                <Button
-                variant={viewMode === 'detailed' ? 'default' : 'outline'}
-                onClick={() => setViewMode('detailed')}
-                >
-                Detailed
-                </Button>
-            </div>
-          )}
-        </div>
-
-        {viewMode === 'detailed' && hasDetailedRecords ? (
-          <DetailedView patient={patient} />
-        ) : (
-          <SummaryView patient={patient} />
-        )}
-      </div>
+       </div>
+      <ConsolidatedReport records={records} />
     </Card>
   );
 }
