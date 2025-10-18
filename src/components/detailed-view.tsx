@@ -28,7 +28,7 @@ const getStatusBadgeClass = (status: LabResult['status']) => {
 };
 
 export default function DetailedView({ patient }: DetailedViewProps) {
-  const sortedRecords = [...patient.records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const sortedRecords = patient.records ? [...patient.records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [];
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(sortedRecords[0]?.id || null);
   
   const selectedRecord = sortedRecords.find(r => r.id === selectedRecordId);
@@ -42,23 +42,29 @@ export default function DetailedView({ patient }: DetailedViewProps) {
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[50vh] px-4">
-              <div className="relative pl-6">
-                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border -translate-x-1/2 ml-3"></div>
-                {sortedRecords.map(record => (
-                  <div key={record.id} className="mb-6 cursor-pointer" onClick={() => setSelectedRecordId(record.id)}>
-                    <div className="absolute left-0 w-3 h-3 bg-border rounded-full -translate-x-1/2 mt-1.5">
-                      {selectedRecordId === record.id && <div className="w-3 h-3 bg-primary rounded-full ring-4 ring-primary/20"></div>}
+                {sortedRecords.length > 0 ? (
+                    <div className="relative pl-6">
+                        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border -translate-x-1/2 ml-3"></div>
+                        {sortedRecords.map(record => (
+                        <div key={record.id} className="mb-6 cursor-pointer" onClick={() => setSelectedRecordId(record.id)}>
+                            <div className="absolute left-0 w-3 h-3 bg-border rounded-full -translate-x-1/2 mt-1.5">
+                            {selectedRecordId === record.id && <div className="w-3 h-3 bg-primary rounded-full ring-4 ring-primary/20"></div>}
+                            </div>
+                            <div className={cn('p-3 rounded-lg border-2', selectedRecordId === record.id ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-accent')}>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Clock className="w-4 h-4" />
+                                <span>{new Date(record.date).toLocaleDateString()}</span>
+                            </div>
+                            <p className="font-semibold mt-1">{record.type}</p>
+                            </div>
+                        </div>
+                        ))}
                     </div>
-                    <div className={cn('p-3 rounded-lg border-2', selectedRecordId === record.id ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-accent')}>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        <span>{new Date(record.date).toLocaleDateString()}</span>
-                      </div>
-                      <p className="font-semibold mt-1">{record.type}</p>
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                        <p>No records found.</p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                )}
             </ScrollArea>
           </CardContent>
         </Card>

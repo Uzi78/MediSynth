@@ -43,18 +43,30 @@ export interface Patient {
   records: Record[];
 }
 
-export interface ConsultationRequest {
+// Summary data for a doctor's view of a patient
+export interface DoctorPatient {
+    id: string; // This will be the patient's ID
+    name: string;
+    age: number;
+    gender: 'M' | 'F' | 'Other';
+    recordCount: number;
+}
+
+export interface Consultation {
     id: string;
-    patient: {
-        name: string;
-        age: number;
-        gender: string;
-        avatarUrl: string;
-    };
-    requestedTime: string;
+    patientId: string;
+    patientName: string;
+    patientAvatarUrl?: string;
+    patientAge: number;
+    patientGender: string;
+    doctorId: string;
     complaint: string;
     urgency: 'High' | 'Medium' | 'Low';
+    status: 'pending' | 'accepted' | 'active' | 'completed' | 'declined';
+    requestedAt: string; // ISO String
+    scheduledFor?: string; // ISO String
 }
+
 
 export interface RecentMessage {
     id: string;
@@ -64,16 +76,6 @@ export interface RecentMessage {
     };
     preview: string;
     time: string;
-}
-
-export interface DoctorPatient {
-    id: string;
-    name: string;
-    age: number;
-    gender: 'M' | 'F';
-    avatarUrl: string;
-    conditions: string[];
-    lastInteraction: string;
 }
 
 export interface Prescription {

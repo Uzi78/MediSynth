@@ -7,9 +7,10 @@ interface SummaryViewProps {
 }
 
 export default function SummaryView({ patient }: SummaryViewProps) {
-  const latestRecord = patient.records.length > 0 ? patient.records.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b) : null;
-  const diagnosesCount = patient.records.flatMap(r => r.extractedData.diagnosis).length;
-  const medicationsCount = patient.records.flatMap(r => r.extractedData.medications).length;
+  const records = patient.records || [];
+  const latestRecord = records.length > 0 ? records.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b) : null;
+  const diagnosesCount = records.flatMap(r => r.extractedData.diagnosis).length;
+  const medicationsCount = records.flatMap(r => r.extractedData.medications).length;
 
   return (
     <div className="space-y-6">
@@ -38,7 +39,7 @@ export default function SummaryView({ patient }: SummaryViewProps) {
             <FileText className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-900">{patient.records.length}</div>
+            <div className="text-2xl font-bold text-green-900">{records.length}</div>
           </CardContent>
         </Card>
       </div>

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { mockPatients } from '@/lib/data';
-import type { Patient } from '@/lib/types';
+import type { DoctorPatient } from '@/lib/types';
 import { Card, CardContent } from '../ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -12,8 +11,12 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Send, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 
+// NOTE: Message functionality is not fully implemented with a backend yet.
+// This is a placeholder UI.
 const mockMessages = {
     p001: [
       { id: 'm1', from: 'doctor', text: 'Good morning, Ahmed. How are you feeling today?', time: '9:30 AM' },
@@ -27,7 +30,7 @@ const mockMessages = {
 
 type Messages = typeof mockMessages;
 
-function ChatView({ patient, messages }: { patient: Patient; messages: Messages['p001'] }) {
+function ChatView({ patient, messages }: { patient: DoctorPatient; messages: Messages['p001'] }) {
     return (
         <Card className="h-full flex flex-col shadow-lg">
             <div className="p-4 border-b flex items-center gap-4">
@@ -68,7 +71,21 @@ function ChatView({ patient, messages }: { patient: Patient; messages: Messages[
 }
 
 export default function MessagePatientView() {
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(mockPatients[0]);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const doctorPatientsCollectionRef = useMemoFirebase(() =>
+    (user && firestore) ? collection(firestore, 'doctors', user.uid, 'patients') : null,
+    [user, firestore]
+  );
+  const { data: patients, isLoading: isLoadingPatients } = useCollection<DoctorPatient>(doctorPatientsCollectionRef);
+
+  const [selectedPatient, setSelectedPatient] = useState<DoctorPatient | null>(null);
+
+  // Auto-select first patient
+  if (!selectedPatient && patients && patients.length > 0) {
+    setSelectedPatient(patients[0]);
+  }
 
   const messagesForSelectedPatient = selectedPatient ? mockMessages[selectedPatient.id as keyof Messages] || [] : [];
   
@@ -83,9 +100,10 @@ export default function MessagePatientView() {
                     </div>
                     <ScrollArea className="h-[calc(100vh-18rem)]">
                         <CommandList>
-                            <CommandEmpty>No results found.</CommandEmpty>
+                            {isLoadingPatients && <CommandEmpty>Loading patients...</CommandEmpty>}
+                            {!isLoadingPatients && patients?.length === 0 && <CommandEmpty>No patients found.</CommandEmpty>}
                             <CommandGroup>
-                            {mockPatients.map((patient) => (
+                            {(patients || []).map((patient) => (
                                 <CommandItem
                                     key={patient.id}
                                     onSelect={() => setSelectedPatient(patient)}
@@ -100,9 +118,6 @@ export default function MessagePatientView() {
                                     </Avatar>
                                     <div>
                                         <p className="font-medium">{patient.name}</p>
-                                        <p className="text-sm text-gray-600 truncate max-w-40">
-                                        {(mockMessages[patient.id as keyof Messages] || []).slice(-1)[0]?.text || 'No messages yet'}
-                                        </p>
                                     </div>
                                 </CommandItem>
                             ))}
@@ -117,6 +132,7 @@ export default function MessagePatientView() {
         {selectedPatient ? (
             <ChatView patient={selectedPatient} messages={messagesForSelectedPatient} />
         ) : (
+             !isLoadingPatients &&
             <Card className="h-full flex items-center justify-center shadow-lg">
                 <div className="text-center text-gray-500">
                     <User className="w-12 h-12 mx-auto mb-4" />

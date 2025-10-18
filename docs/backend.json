@@ -41,13 +41,7 @@
           "format": "email"
         }
       },
-      "required": [
-        "id",
-        "name",
-        "age",
-        "gender",
-        "email"
-      ]
+      "required": ["id", "name", "age", "gender", "email"]
     },
     "Record": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -85,22 +79,43 @@
           "description": "The raw, unprocessed text of the medical document."
         }
       },
-      "required": [
-        "id",
-        "patientId",
-        "date",
-        "type",
-        "status",
-        "summary",
-        "rawDocument"
-      ]
+      "required": ["id", "patientId", "date", "type", "status", "summary", "rawDocument"]
+    },
+    "DoctorPatient": {
+      "title": "Doctor's Patient",
+      "type": "object",
+      "description": "Represents the relationship between a doctor and a patient, with summary data for list views.",
+      "properties": {
+        "patientId": { "type": "string", "description": "The ID of the patient." },
+        "name": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string" },
+        "recordCount": { "type": "number" }
+      },
+      "required": ["patientId", "name", "age", "gender", "recordCount"]
+    },
+    "Consultation": {
+      "title": "Consultation",
+      "type": "object",
+      "description": "Represents a consultation request and its lifecycle.",
+      "properties": {
+        "patientId": { "type": "string" },
+        "patientName": { "type": "string" },
+        "patientAvatarUrl": { "type": "string" },
+        "patientAge": { "type": "number" },
+        "patientGender": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "complaint": { "type": "string" },
+        "urgency": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "status": { "type": "string", "enum": ["pending", "accepted", "active", "completed", "declined"] },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "scheduledFor": { "type": "string", "format": "date-time" }
+      },
+      "required": ["patientId", "patientName", "doctorId", "complaint", "status", "requestedAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -108,63 +123,42 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores user profile information, including their role.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique ID of the user."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Stores user profile information, including their role."
         }
       },
       {
         "path": "/users/{userId}/patients/{patientId}",
         "definition": {
           "entityName": "Patient",
-          "schema": {
-            "$ref": "#/backend/entities/Patient"
-          },
-          "description": "Stores patient information. Each patient is owned by a specific user, identified by their userId.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the patient data."
-            },
-            {
-              "name": "patientId",
-              "description": "The unique ID of the patient."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Patient" },
+          "description": "Stores full patient data, only accessible by the patient themselves."
         }
       },
       {
         "path": "/users/{userId}/patients/{patientId}/records/{recordId}",
         "definition": {
           "entityName": "Record",
-          "schema": {
-            "$ref": "#/backend/entities/Record"
-          },
-          "description": "Stores medical records associated with a specific patient. Includes denormalized patientId for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the patient data."
-            },
-            {
-              "name": "patientId",
-              "description": "The unique ID of the patient."
-            },
-            {
-              "name": "recordId",
-              "description": "The unique ID of the medical record."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Record" },
+          "description": "Stores medical records for a patient."
+        }
+      },
+      {
+        "path": "/doctors/{doctorId}/patients/{patientId}",
+        "definition": {
+            "entityName": "DoctorPatient",
+            "schema": { "$ref": "#/backend/entities/DoctorPatient" },
+            "description": "A summary of a patient assigned to a doctor. Used for list views."
+        }
+      },
+      {
+        "path": "/consultations/{consultationId}",
+        "definition": {
+            "entityName": "Consultation",
+            "schema": { "$ref": "#/backend/entities/Consultation" },
+            "description": "Stores consultation requests and their status."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. A top-level 'users' collection stores role information. Patient data is nested under the user who owns it, ensuring that access control is straightforward and efficient. All documents within a collection share the same security requirements, simplifying security rules. The design uses denormalization to avoid `get()` calls in security rules. This enables secure `list` operations using path-based ownership."
+    ]
   }
 }

@@ -4,8 +4,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConsultationRequestsTab } from "../consultation-requests-tab";
 import { ScheduledConsultationsTab } from "../scheduled-consultations-tab";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { Consultation } from "@/lib/types";
 
 export default function ConsultationsView() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const consultationsCollectionRef = useMemoFirebase(() =>
+        (user && firestore) ? collection(firestore, 'consultations') : null,
+        [user, firestore]
+    );
+
+    const pendingQuery = useMemoFirebase(() =>
+        consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid), where('status', '==', 'pending')) : null,
+        [consultationsCollectionRef, user]
+    );
+    const { data: pendingConsultations, isLoading: isLoadingPending } = useCollection<Consultation>(pendingQuery);
+
+    const scheduledQuery = useMemoFirebase(() =>
+        consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid), where('status', '==', 'accepted')) : null,
+        [consultationsCollectionRef, user]
+    );
+    const { data: scheduledConsultations, isLoading: isLoadingScheduled } = useCollection<Consultation>(scheduledQuery);
+
     return (
         <Card className="shadow-lg h-full">
             <CardHeader>
@@ -20,10 +43,10 @@ export default function ConsultationsView() {
                         <TabsTrigger value="history">History</TabsTrigger>
                     </TabsList>
                     <TabsContent value="requests">
-                        <ConsultationRequestsTab />
+                        <ConsultationRequestsTab consultations={pendingConsultations || []} isLoading={isLoadingPending} />
                     </TabsContent>
                     <TabsContent value="scheduled">
-                        <ScheduledConsultationsTab />
+                        <ScheduledConsultationsTab consultations={scheduledConsultations || []} isLoading={isLoadingScheduled} />
                     </TabsContent>
                     <TabsContent value="active">
                         <div className="flex items-center justify-center p-8">

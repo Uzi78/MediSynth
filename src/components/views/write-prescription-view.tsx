@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray, Controller, UseFormReturn, Control } from 'react-hook-form';
+import { useForm, useFieldArray, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { mockPatients } from '@/lib/data';
-import type { Patient } from '@/lib/types';
+import type { DoctorPatient } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -16,6 +15,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, Pill, Plus, Trash2, FileText, Send } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 const prescriptionSchema = z.object({
   medications: z.array(z.object({
@@ -32,10 +33,12 @@ const prescriptionSchema = z.object({
 type PrescriptionFormValues = z.infer<typeof prescriptionSchema>;
 
 interface PatientSelectionStepProps {
-  onSelectPatient: (patient: Patient) => void;
+  patients: DoctorPatient[];
+  isLoading: boolean;
+  onSelectPatient: (patient: DoctorPatient) => void;
 }
 
-function PatientSelectionStep({ onSelectPatient }: PatientSelectionStepProps) {
+function PatientSelectionStep({ patients, isLoading, onSelectPatient }: PatientSelectionStepProps) {
     return (
         <Card className="shadow-lg">
         <CardHeader>
@@ -46,9 +49,10 @@ function PatientSelectionStep({ onSelectPatient }: PatientSelectionStepProps) {
             <Command className="rounded-lg border shadow-md">
             <CommandInput placeholder="Search for a patient..." />
             <CommandList>
-                <CommandEmpty>No results found.</CommandEmpty>
+                {isLoading && <CommandEmpty>Loading patients...</CommandEmpty>}
+                {!isLoading && patients.length === 0 && <CommandEmpty>No patients found.</CommandEmpty>}
                 <CommandGroup>
-                {mockPatients.map((patient) => (
+                {patients.map((patient) => (
                     <CommandItem
                     key={patient.id}
                     onSelect={() => onSelectPatient(patient)}
@@ -57,7 +61,7 @@ function PatientSelectionStep({ onSelectPatient }: PatientSelectionStepProps) {
                     <User className="h-5 w-5 text-gray-500" />
                     <div>
                         <p className="font-medium">{patient.name}</p>
-                        <p className="text-sm text-gray-600">{patient.email}</p>
+                        <p className="text-sm text-gray-600">{patient.age}, {patient.gender}</p>
                     </div>
                     </CommandItem>
                 ))}
@@ -70,7 +74,7 @@ function PatientSelectionStep({ onSelectPatient }: PatientSelectionStepProps) {
 }
 
 interface PrescriptionFormStepProps {
-    patient: Patient;
+    patient: DoctorPatient;
     form: UseFormReturn<PrescriptionFormValues>;
     onBack: () => void;
     onSubmit: (data: PrescriptionFormValues) => void;
@@ -228,8 +232,16 @@ function PrescriptionFormStep({ patient, form, onBack, onSubmit }: PrescriptionF
 }
 
 export default function WritePrescriptionView() {
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<DoctorPatient | null>(null);
   const [step, setStep] = useState(1);
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const doctorPatientsCollectionRef = useMemoFirebase(() =>
+    (user && firestore) ? collection(firestore, 'doctors', user.uid, 'patients') : null,
+    [user, firestore]
+  );
+  const { data: patients, isLoading: isLoadingPatients } = useCollection<DoctorPatient>(doctorPatientsCollectionRef);
 
   const form = useForm<PrescriptionFormValues>({
     resolver: zodResolver(prescriptionSchema),
@@ -240,11 +252,11 @@ export default function WritePrescriptionView() {
   });
 
   const onSubmit = (data: PrescriptionFormValues) => {
-    console.log(data);
+    console.log("Prescription Data:", data);
     // Here you would handle submitting the prescription
   };
 
-  const handleSelectPatient = (patient: Patient) => {
+  const handleSelectPatient = (patient: DoctorPatient) => {
     setSelectedPatient(patient);
     setStep(2);
   }
@@ -258,9 +270,18 @@ export default function WritePrescriptionView() {
   return (
     <div className="h-full">
       {step === 1 || !selectedPatient ? (
-          <PatientSelectionStep onSelectPatient={handleSelectPatient} />
+          <PatientSelectionStep 
+            patients={patients || []} 
+            isLoading={isLoadingPatients} 
+            onSelectPatient={handleSelectPatient} 
+          />
       ) : (
-          <PrescriptionFormStep patient={selectedPatient} form={form} onBack={handleGoBack} onSubmit={onSubmit} />
+          <PrescriptionFormStep 
+            patient={selectedPatient} 
+            form={form} 
+            onBack={handleGoBack} 
+            onSubmit={onSubmit} 
+          />
       )}
     </div>
   );

@@ -4,69 +4,13 @@ import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { format } from 'date-fns';
 import { Users, Video, MessageSquare, ClipboardPlus, Check, X, Send, CalendarCheck } from 'lucide-react';
-import type { ConsultationRequest, RecentMessage } from '@/lib/types';
+import type { Consultation } from '@/lib/types';
+import { collection, query, where, updateDoc, doc } from 'firebase/firestore';
+import { acceptConsultation, declineConsultation } from '@/firebase/firestore/consultations';
 
-
-// Mock data - replace with real data from your backend
-const mockConsultationRequests: ConsultationRequest[] = [
-    {
-      id: 'cr001',
-      patient: { name: 'Ali Hassan', age: 34, gender: 'M', avatarUrl: 'https://i.pravatar.cc/150?u=ali' },
-      requestedTime: '10:00 AM',
-      complaint: 'Fever and cough',
-      urgency: 'High',
-    },
-    {
-      id: 'cr002',
-      patient: { name: 'Fatima Ahmed', age: 28, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=fatima' },
-      requestedTime: '11:30 AM',
-      complaint: 'Follow-up for allergies',
-      urgency: 'Low',
-    },
-    {
-        id: 'cr003',
-        patient: { name: 'Zainab Omar', age: 45, gender: 'F', avatarUrl: 'https://i.pravatar.cc/150?u=zainab' },
-        requestedTime: '2:00 PM',
-        complaint: 'Mild headache',
-        urgency: 'Medium',
-    },
-];
-  
-const mockRecentMessages: RecentMessage[] = [
-    {
-      id: 'msg001',
-      patient: { name: 'Yusuf Ibrahim', avatarUrl: 'https://i.pravatar.cc/150?u=yusuf' },
-      preview: 'Thank you, doctor. I am feeling much better now.',
-      time: '10:45 AM',
-    },
-    {
-      id: 'msg002',
-      patient: { name: 'Aisha Khan', avatarUrl: 'https://i.pravatar.cc/150?u=aisha' },
-      preview: 'I have a question about the new prescription...',
-      time: '9:30 AM',
-    },
-    {
-        id: 'msg003',
-        patient: { name: 'Bilal Ahmed', avatarUrl: 'https://i.pravatar.cc/150?u=bilal' },
-        preview: 'Is it normal to experience this side effect?',
-        time: 'Yesterday',
-    },
-    {
-        id: 'msg004',
-        patient: { name: 'Maryam Khalid', avatarUrl: 'https://i.pravatar.cc/150?u=maryam' },
-        preview: 'Just checking in for my appointment tomorrow.',
-        time: 'Yesterday',
-    },
-    {
-        id: 'msg005',
-        patient: { name: 'Omar Farooq', avatarUrl: 'https://i.pravatar.cc/150?u=omar' },
-        preview: 'The pharmacy needs a confirmation for the refill.',
-        time: '2 days ago',
-    },
-];
 
 interface DoctorDashboardViewProps {
     setActiveView: Dispatch<SetStateAction<string>>;
@@ -74,11 +18,32 @@ interface DoctorDashboardViewProps {
 
 export default function DoctorDashboardView({ setActiveView }: DoctorDashboardViewProps) {
     const { user } = useUser();
+    const firestore = useFirestore();
     const [currentDate, setCurrentDate] = useState('');
 
     useEffect(() => {
         setCurrentDate(format(new Date(), 'EEEE, MMMM do, yyyy'));
     }, []);
+
+    const consultationsCollectionRef = useMemoFirebase(() =>
+        (user && firestore) ? collection(firestore, 'consultations') : null
+    , [user, firestore]);
+    
+    const pendingConsultationsQuery = useMemoFirebase(() =>
+        consultationsCollectionRef ? query(consultationsCollectionRef, where('doctorId', '==', user?.uid), where('status', '==', 'pending')) : null
+    , [consultationsCollectionRef, user]);
+
+    const { data: pendingConsultations, isLoading: isLoadingConsultations } = useCollection<Consultation>(pendingConsultationsQuery);
+
+    const handleAccept = async (consultationId: string) => {
+        if (!firestore) return;
+        await acceptConsultation(firestore, consultationId);
+    };
+
+    const handleDecline = async (consultationId: string) => {
+        if (!firestore) return;
+        await declineConsultation(firestore, consultationId);
+    };
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -104,7 +69,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
             </div>
             
             <div className="text-lg font-semibold text-primary">
-                You have {mockConsultationRequests.length} pending consultations today
+                You have {isLoadingConsultations ? '...' : (pendingConsultations?.length || 0)} pending consultations today
             </div>
 
             {/* Stat Cards */}
@@ -115,7 +80,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <Users className="h-5 w-5 text-blue-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-blue-900">24</div>
+                        <div className="text-3xl font-bold text-blue-900">...</div>
                         <p className="text-xs text-gray-500 mt-1">Assigned to you</p>
                     </CardContent>
                 </Card>
@@ -125,7 +90,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <CalendarCheck className="h-5 w-5 text-green-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-green-900">{mockConsultationRequests.length}</div>
+                        <div className="text-3xl font-bold text-green-900">{isLoadingConsultations ? '...' : (pendingConsultations?.length || 0)}</div>
                         <p className="text-xs text-gray-500 mt-1">Patients waiting for consultation</p>
                     </CardContent>
                 </Card>
@@ -135,7 +100,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <MessageSquare className="h-5 w-5 text-purple-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-purple-900">5</div>
+                        <div className="text-3xl font-bold text-purple-900">...</div>
                         <p className="text-xs text-gray-500 mt-1">From patients</p>
                     </CardContent>
                 </Card>
@@ -145,7 +110,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <ClipboardPlus className="h-5 w-5 text-orange-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-bold text-orange-900">12</div>
+                        <div className="text-3xl font-bold text-orange-900">...</div>
                         <p className="text-xs text-gray-500 mt-1">Issued this week</p>
                     </CardContent>
                 </Card>
@@ -158,23 +123,25 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <CardTitle>Consultation Requests</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {mockConsultationRequests.map(req => (
+                        {isLoadingConsultations ? <p>Loading...</p> : 
+                         !pendingConsultations || pendingConsultations.length === 0 ? <p>No pending requests.</p> :
+                         pendingConsultations.map(req => (
                             <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center gap-4">
                                     <Avatar>
-                                        <AvatarImage src={req.patient.avatarUrl} alt={req.patient.name} />
-                                        <AvatarFallback>{req.patient.name.charAt(0)}</AvatarFallback>
+                                        <AvatarImage src={req.patientAvatarUrl} alt={req.patientName} />
+                                        <AvatarFallback>{req.patientName.charAt(0)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-semibold">{req.patient.name}</p>
-                                        <p className="text-sm text-gray-500">{req.patient.age}, {req.patient.gender} &middot; {req.requestedTime}</p>
+                                        <p className="font-semibold">{req.patientName}</p>
+                                        <p className="text-sm text-gray-500">{req.patientAge}, {req.patientGender}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700">
+                                    <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700" onClick={() => handleDecline(req.id)}>
                                         <X className="w-4 h-4 mr-1" /> Decline
                                     </Button>
-                                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleAccept(req.id)}>
                                         <Check className="w-4 h-4 mr-1" /> Accept
                                     </Button>
                                 </div>
@@ -188,21 +155,9 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <CardTitle>Recent Messages</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        {mockRecentMessages.map(msg => (
-                           <div key={msg.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={msg.patient.avatarUrl} alt={msg.patient.name} />
-                                        <AvatarFallback>{msg.patient.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div className='max-w-xs'>
-                                        <p className="font-semibold">{msg.patient.name}</p>
-                                        <p className="text-sm text-gray-500 truncate">{msg.preview}</p>
-                                    </div>
-                                </div>
-                                <p className="text-xs text-gray-400 self-start">{msg.time}</p>
-                            </div>
-                        ))}
+                       <div className='flex items-center justify-center h-full text-gray-500'>
+                         <p>No recent messages.</p>
+                       </div>
                     </CardContent>
                 </Card>
             </div>
