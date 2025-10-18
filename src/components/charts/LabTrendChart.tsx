@@ -1,8 +1,7 @@
 'use client';
 
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface LabHistoryPoint {
   date: string;
@@ -13,20 +12,33 @@ interface LabTrendChartProps {
   data: LabHistoryPoint[];
 }
 
-export function LabTrendChart({ data }: LabTrendChartProps) {
-  if (!data || data.length < 2) {
+export function LabTrendChart({ data: initialData }: LabTrendChartProps) {
+  let data = initialData;
+
+  if (!data || data.length === 0) {
     return (
         <div className="flex items-center justify-center h-full w-full text-gray-500">
-            <p>Not enough data to display trend.</p>
+            <p>No data to display.</p>
         </div>
     );
   }
+
+  // If there's only one data point, create a second one to draw a flat line
+  if (data.length === 1) {
+    const singlePoint = data[0];
+    const nextDay = addDays(parseISO(singlePoint.date), 1);
+    data = [
+      singlePoint,
+      { ...singlePoint, date: nextDay.toISOString() }
+    ];
+  }
+
 
   const getDomain = (data: LabHistoryPoint[]) => {
     const values = data.map(p => p.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
-    const padding = (max - min) * 0.1; // 10% padding
+    const padding = (max - min) * 0.1 || 1; // Add padding, with a fallback for flat lines
 
     return [
       (dataMin: number) => Math.floor(Math.max(0, dataMin - padding)),
