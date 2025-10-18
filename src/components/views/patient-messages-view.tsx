@@ -49,6 +49,7 @@ function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultat
             senderRole: 'patient' as const,
             text: newMessage,
             timestamp: serverTimestamp(),
+            isRead: false,
         };
 
         await addDoc(messagesCollectionRef, messageToSend);
@@ -56,13 +57,13 @@ function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultat
     };
 
     const formatMessageTime = (timestamp: Message['timestamp']) => {
-        if (!timestamp) return '';
+        if (!timestamp || !('seconds' in timestamp)) return '';
         const date = new Date(timestamp.seconds * 1000);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     return (
-        <Card className="h-full flex flex-col shadow-lg">
+        <Card className="h-full flex flex-col shadow-lg bg-card">
             <div className="p-4 border-b flex items-center gap-4">
                 <Avatar>
                     <AvatarImage src={doctor.photoUrl} />
@@ -70,18 +71,18 @@ function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultat
                 </Avatar>
                 <div>
                     <h3 className="font-semibold text-lg">Dr. {doctor.name}</h3>
-                    <p className="text-sm text-gray-500">{doctor.specialty}</p>
+                    <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
                 </div>
             </div>
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 <div className="space-y-4">
-                     {isLoadingMessages && <p>Loading messages...</p>}
+                     {isLoadingMessages && <p className='text-muted-foreground'>Loading messages...</p>}
                     {messages && messages.map((msg) => (
                         <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === patientUser?.uid ? 'justify-end' : '')}>
                              {msg.senderId !== patientUser?.uid && <Avatar className="w-8 h-8"><AvatarImage src={doctor.photoUrl} /><AvatarFallback>{doctor.name.charAt(0)}</AvatarFallback></Avatar>}
                             <div className={cn(
                                 'p-3 rounded-lg max-w-xs lg:max-w-md',
-                                msg.senderId === patientUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                msg.senderId === patientUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted dark:bg-slate-700'
                             )}>
                                 <p>{msg.text}</p>
                                 <p className={cn("text-xs mt-1", msg.senderId === patientUser?.uid ? 'text-primary-foreground/70' : 'text-muted-foreground' )}>{formatMessageTime(msg.timestamp)}</p>
@@ -95,7 +96,7 @@ function ChatView({ doctor, consultationId }: { doctor: DoctorProfile; consultat
                 <div className="flex items-center gap-2">
                     <Input 
                         placeholder="Type a message..." 
-                        className="flex-1"
+                        className="flex-1 bg-background"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                     />
@@ -172,7 +173,7 @@ export default function PatientMessagesView() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
       <div className="lg:col-span-4 xl:col-span-3">
-        <Card className="h-full shadow-md">
+        <Card className="h-full shadow-md bg-card">
             <CardContent className="p-0">
                 <Command className="rounded-lg border-0 shadow-none bg-transparent h-full flex flex-col">
                     <div className='p-4 border-b'>
@@ -214,8 +215,8 @@ export default function PatientMessagesView() {
             <ChatView doctor={selectedDoctor} consultationId={selectedConsultationId} />
         ) : (
              !isLoading &&
-            <Card className="h-full flex items-center justify-center shadow-lg">
-                <div className="text-center text-gray-500">
+            <Card className="h-full flex items-center justify-center shadow-lg bg-card">
+                <div className="text-center text-muted-foreground">
                     <Stethoscope className="w-12 h-12 mx-auto mb-4" />
                     <p>Select a doctor to start messaging</p>
                 </div>

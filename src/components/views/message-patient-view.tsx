@@ -12,7 +12,7 @@ import { Input } from '../ui/input';
 import { Send, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, getDocs, writeBatch, doc } from 'firebase/firestore';
 
 
 function ChatView({ patient, consultationId }: { patient: DoctorPatient; consultationId: string }) {
@@ -31,6 +31,26 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
     
     const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
     
+    // Mark messages as read effect
+    useEffect(() => {
+        const markMessagesAsRead = async () => {
+            if (!firestore || !doctorUser || !messages || messages.length === 0) return;
+
+            const unreadMessages = messages.filter(m => m.senderId !== doctorUser.uid && !m.isRead);
+            if (unreadMessages.length === 0) return;
+
+            const batch = writeBatch(firestore);
+            unreadMessages.forEach(msg => {
+                const msgRef = doc(firestore, 'consultations', consultationId, 'messages', msg.id);
+                batch.update(msgRef, { isRead: true });
+            });
+
+            await batch.commit();
+        };
+
+        markMessagesAsRead();
+    }, [messages, firestore, doctorUser, consultationId]);
+
     useEffect(() => {
         if (scrollAreaRef.current) {
             scrollAreaRef.current.scrollTo({
@@ -49,6 +69,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
             senderRole: 'doctor' as const,
             text: newMessage,
             timestamp: serverTimestamp(),
+            isRead: false,
         };
 
         await addDoc(messagesCollectionRef, messageToSend);
@@ -62,7 +83,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
     }
 
     return (
-        <Card className="h-full flex flex-col shadow-lg">
+        <Card className="h-full flex flex-col shadow-lg bg-card">
             <div className="p-4 border-b flex items-center gap-4">
                 <Avatar>
                     <AvatarImage src={(patient as any).avatarUrl || ''} />
@@ -70,18 +91,18 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
                 </Avatar>
                 <div>
                     <h3 className="font-semibold text-lg">{patient.name}</h3>
-                    <p className="text-sm text-gray-500">Active now</p>
+                    <p className="text-sm text-muted-foreground">Active now</p>
                 </div>
             </div>
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 <div className="space-y-4">
-                    {isLoadingMessages && <p>Loading messages...</p>}
+                    {isLoadingMessages && <p className='text-muted-foreground'>Loading messages...</p>}
                     {messages && messages.map((msg) => (
                         <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === doctorUser?.uid ? 'justify-end' : '')}>
                             {msg.senderId !== doctorUser?.uid && <Avatar className="w-8 h-8"><AvatarImage src={(patient as any).avatarUrl || ''} /><AvatarFallback>{patient.name.charAt(0)}</AvatarFallback></Avatar>}
                             <div className={cn(
                                 'p-3 rounded-lg max-w-xs lg:max-w-md',
-                                msg.senderId === doctorUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                msg.senderId === doctorUser?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted dark:bg-slate-700'
                             )}>
                                 <p>{msg.text}</p>
                                 <p className={cn("text-xs mt-1", msg.senderId === doctorUser?.uid ? 'text-primary-foreground/70' : 'text-muted-foreground' )}>{formatMessageTime(msg.timestamp)}</p>
@@ -95,7 +116,7 @@ function ChatView({ patient, consultationId }: { patient: DoctorPatient; consult
                 <div className="flex items-center gap-2">
                     <Input 
                         placeholder="Type a message..." 
-                        className="flex-1"
+                        className="flex-1 bg-background"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                     />
@@ -161,7 +182,7 @@ export default function MessagePatientView() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
       <div className="lg:col-span-4 xl:col-span-3">
-        <Card className="h-full shadow-md">
+        <Card className="h-full shadow-md bg-card">
             <CardContent className="p-0">
                 <Command className="rounded-lg border-0 shadow-none bg-transparent h-full flex flex-col">
                     <div className='p-4 border-b'>
@@ -202,8 +223,8 @@ export default function MessagePatientView() {
             <ChatView patient={selectedPatient} consultationId={selectedConsultationId} />
         ) : (
              !isLoadingConsultations &&
-            <Card className="h-full flex items-center justify-center shadow-lg">
-                <div className="text-center text-gray-500">
+            <Card className="h-full flex items-center justify-center shadow-lg bg-card">
+                <div className="text-center text-muted-foreground">
                     <User className="w-12 h-12 mx-auto mb-4" />
                     <p>Select a patient to start messaging</p>
                 </div>

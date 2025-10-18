@@ -78,6 +78,7 @@ export interface Message {
     seconds: number;
     nanoseconds: number;
   } | any; // Use `any` to accommodate serverTimestamp()
+  isRead: boolean;
 }
 
 export interface RecentMessage {
