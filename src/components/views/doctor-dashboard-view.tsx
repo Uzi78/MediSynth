@@ -56,10 +56,10 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                    <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                         {getGreeting()}, Dr. {user?.displayName || user?.email?.split('@')[0] || 'User'}
                     </h1>
-                    <p className="text-md text-gray-500">{currentDate}</p>
+                    <p className="text-md text-muted-foreground">{currentDate}</p>
                 </div>
                 <div className='flex items-center gap-2'>
                     <Button onClick={() => setActiveView('consultations')}><CalendarCheck /> Start Consultation</Button>
@@ -81,7 +81,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-blue-900">...</div>
-                        <p className="text-xs text-gray-500 mt-1">Assigned to you</p>
+                        <p className="text-xs text-muted-foreground mt-1">Assigned to you</p>
                     </CardContent>
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
@@ -91,7 +91,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-green-900">{isLoadingConsultations ? '...' : (pendingConsultations?.length || 0)}</div>
-                        <p className="text-xs text-gray-500 mt-1">Patients waiting for consultation</p>
+                        <p className="text-xs text-muted-foreground mt-1">Patients waiting for consultation</p>
                     </CardContent>
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
@@ -101,7 +101,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-purple-900">...</div>
-                        <p className="text-xs text-gray-500 mt-1">From patients</p>
+                        <p className="text-xs text-muted-foreground mt-1">From patients</p>
                     </CardContent>
                 </Card>
                 <Card className="hover:shadow-lg transition-shadow">
@@ -111,7 +111,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                     </CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-orange-900">...</div>
-                        <p className="text-xs text-gray-500 mt-1">Issued this week</p>
+                        <p className="text-xs text-muted-foreground mt-1">Issued this week</p>
                     </CardContent>
                 </Card>
             </div>
@@ -134,7 +134,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                                     </Avatar>
                                     <div>
                                         <p className="font-semibold">{req.patientName}</p>
-                                        <p className="text-sm text-gray-500">{req.patientAge}, {req.patientGender}</p>
+                                        <p className="text-sm text-muted-foreground">{req.patientAge}, {req.patientGender}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -155,7 +155,7 @@ export default function DoctorDashboardView({ setActiveView }: DoctorDashboardVi
                         <CardTitle>Recent Messages</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                       <div className='flex items-center justify-center h-full text-gray-500'>
+                       <div className='flex items-center justify-center h-full text-muted-foreground'>
                          <p>No recent messages.</p>
                        </div>
                     </CardContent>

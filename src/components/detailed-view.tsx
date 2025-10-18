@@ -51,7 +51,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
                             {selectedRecordId === record.id && <div className="w-3 h-3 bg-primary rounded-full ring-4 ring-primary/20"></div>}
                             </div>
                             <div className={cn('p-3 rounded-lg border-2', selectedRecordId === record.id ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-accent')}>
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Clock className="w-4 h-4" />
                                 <span>{new Date(record.date).toLocaleDateString()}</span>
                             </div>
@@ -61,7 +61,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
                         <p>No records found.</p>
                     </div>
                 )}
@@ -78,7 +78,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <div>
                   <h3 className="text-xl font-bold">{selectedRecord.type}</h3>
-                  <p className="text-gray-500">Date: {new Date(selectedRecord.date).toLocaleDateString()}</p>
+                  <p className="text-muted-foreground">Date: {new Date(selectedRecord.date).toLocaleDateString()}</p>
                 </div>
               </div>
               <Separator />
@@ -86,7 +86,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
                   {selectedRecord.extractedData.diagnosis.length > 0 && (
                   <div>
                     <h4 className="font-semibold mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-red-500"/>Diagnoses</h4>
-                    <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    <ul className="list-disc list-inside space-y-1 text-foreground/80">
                       {selectedRecord.extractedData.diagnosis.map((d, i) => <li key={i}>{d}</li>)}
                     </ul>
                   </div>
@@ -96,9 +96,9 @@ export default function DetailedView({ patient }: DetailedViewProps) {
                     <h4 className="font-semibold mb-2 flex items-center gap-2"><Pill className="w-5 h-5 text-blue-500"/>Medications</h4>
                     <div className="space-y-2">
                       {selectedRecord.extractedData.medications.map((m,i) => (
-                          <div key={i} className="p-3 bg-blue-50 rounded-md border border-blue-100 flex justify-between items-center">
-                            <span className="font-medium text-blue-900">{m.name}</span>
-                            <span className="text-sm text-blue-800">{m.dosage}, {m.frequency}</span>
+                          <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-900/30 flex justify-between items-center">
+                            <span className="font-medium text-blue-900 dark:text-blue-200">{m.name}</span>
+                            <span className="text-sm text-blue-800 dark:text-blue-300">{m.dosage}, {m.frequency}</span>
                           </div>
                       ))}
                     </div>
@@ -133,7 +133,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
                 )}
                   <div>
                     <h4 className="font-semibold mb-2">Clinical Summary</h4>
-                    <div className="bg-gray-100 p-4 rounded-lg text-sm text-gray-800">
+                    <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg text-sm text-foreground/80">
                       {selectedRecord.summary}
                     </div>
                   </div>
@@ -141,7 +141,7 @@ export default function DetailedView({ patient }: DetailedViewProps) {
             </div>
             </ScrollArea>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-muted-foreground">
               <p>Select a record from the timeline to view details.</p>
             </div>
           )}

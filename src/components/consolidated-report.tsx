@@ -25,9 +25,9 @@ export default function ConsolidatedReport({ records }: ConsolidatedReportProps)
   if (!consolidatedData) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-10 text-center">
-        <FileText className="w-16 h-16 text-gray-300 mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-700">No Data for Consolidated Report</h2>
-        <p className="mt-2 text-gray-500">This patient has no medical documents to generate a report from.</p>
+        <FileText className="w-16 h-16 text-gray-300 dark:text-gray-700 mb-4" />
+        <h2 className="text-2xl font-semibold text-foreground">No Data for Consolidated Report</h2>
+        <p className="mt-2 text-muted-foreground">This patient has no medical documents to generate a report from.</p>
       </div>
     );
   }
@@ -41,25 +41,25 @@ export default function ConsolidatedReport({ records }: ConsolidatedReportProps)
                 <CardDescription>An aggregated overview of all available medical records.</CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <FileText className="w-6 h-6 mx-auto text-gray-500 mb-2" />
+                <div className="p-4 bg-muted/50 rounded-lg">
+                    <FileText className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
                     <p className="text-2xl font-bold">{consolidatedData.summary.recordCount}</p>
-                    <p className="text-sm text-gray-600">Total Records</p>
+                    <p className="text-sm text-muted-foreground">Total Records</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <Calendar className="w-6 h-6 mx-auto text-gray-500 mb-2" />
+                <div className="p-4 bg-muted/50 rounded-lg">
+                    <Calendar className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm font-bold">{consolidatedData.summary.dateRange}</p>
-                    <p className="text-sm text-gray-600">Date Range</p>
+                    <p className="text-sm text-muted-foreground">Date Range</p>
                 </div>
-                 <div className="p-4 bg-gray-50 rounded-lg">
+                 <div className="p-4 bg-muted/50 rounded-lg">
                     <AlertCircle className="w-6 h-6 mx-auto text-red-500 mb-2" />
                     <p className="text-2xl font-bold">{consolidatedData.diagnoses.length}</p>
-                    <p className="text-sm text-gray-600">Unique Diagnoses</p>
+                    <p className="text-sm text-muted-foreground">Unique Diagnoses</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="p-4 bg-muted/50 rounded-lg">
                     <Pill className="w-6 h-6 mx-auto text-blue-500 mb-2" />
                     <p className="text-2xl font-bold">{consolidatedData.medications.length}</p>
-                    <p className="text-sm text-gray-600">Unique Medications</p>
+                    <p className="text-sm text-muted-foreground">Unique Medications</p>
                 </div>
             </CardContent>
         </Card>
@@ -128,7 +128,7 @@ export default function ConsolidatedReport({ records }: ConsolidatedReportProps)
             {Object.values(consolidatedData.labResults).map(lab => (
               <div key={lab.name} className="border p-4 rounded-lg">
                 <h3 className="font-bold text-lg mb-2">{lab.name}</h3>
-                <p className="text-sm text-gray-600 mb-4">Latest: <span className="font-semibold">{lab.latest.value}</span> (on {lab.latest.date})</p>
+                <p className="text-sm text-muted-foreground mb-4">Latest: <span className="font-semibold text-foreground">{lab.latest.value}</span> (on {lab.latest.date})</p>
                 <div className="h-60 w-full">
                     <LabTrendChart data={lab.history} />
                 </div>

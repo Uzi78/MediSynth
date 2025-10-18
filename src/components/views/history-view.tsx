@@ -31,7 +31,7 @@ function RecordDetails({ record }: { record: RecordType }) {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <div>
                 <h3 className="text-xl font-bold">{record.type}</h3>
-                <p className="text-gray-500">Date: {new Date(record.date).toLocaleDateString()}</p>
+                <p className="text-muted-foreground">Date: {new Date(record.date).toLocaleDateString()}</p>
               </div>
             </div>
             <Separator />
@@ -40,7 +40,7 @@ function RecordDetails({ record }: { record: RecordType }) {
                 {record.extractedData.diagnosis.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2 flex items-center gap-2"><AlertCircle className="w-5 h-5 text-red-500"/>Diagnoses</h4>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
+                  <ul className="list-disc list-inside space-y-1 text-foreground/80">
                     {record.extractedData.diagnosis.map((d, i) => <li key={i}>{d}</li>)}
                   </ul>
                 </div>
@@ -50,9 +50,9 @@ function RecordDetails({ record }: { record: RecordType }) {
                   <h4 className="font-semibold mb-2 flex items-center gap-2"><Pill className="w-5 h-5 text-blue-500"/>Medications</h4>
                   <div className="space-y-2">
                     {record.extractedData.medications.map((m,i) => (
-                        <div key={i} className="p-3 bg-blue-50 rounded-md border border-blue-100 flex justify-between items-center">
-                          <span className="font-medium text-blue-900">{m.name}</span>
-                          <span className="text-sm text-blue-800">{m.dosage}, {m.frequency}</span>
+                        <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-100 dark:border-blue-900/30 flex justify-between items-center">
+                          <span className="font-medium text-blue-900 dark:text-blue-200">{m.name}</span>
+                          <span className="text-sm text-blue-800 dark:text-blue-300">{m.dosage}, {m.frequency}</span>
                         </div>
                     ))}
                   </div>
@@ -87,7 +87,7 @@ function RecordDetails({ record }: { record: RecordType }) {
               )}
                 <div>
                   <h4 className="font-semibold mb-2">Clinical Summary</h4>
-                  <div className="bg-gray-100 p-4 rounded-lg text-sm text-gray-800">
+                  <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg text-sm text-foreground/80">
                     {record.summary}
                   </div>
                 </div>
@@ -144,8 +144,8 @@ export default function HistoryView() {
                                     : 'border-transparent bg-card'
                                 )}
                                 >
-                                    <p className="font-semibold text-gray-800 text-sm truncate pr-4">{record.type}</p>
-                                    <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
+                                    <p className="font-semibold text-foreground text-sm truncate pr-4">{record.type}</p>
+                                    <div className="text-xs text-muted-foreground mt-2 flex justify-between items-center">
                                         <span>{new Date(record.date).toLocaleDateString()}</span>
                                         <div className="flex items-center gap-1">
                                             <FileText className="w-3 h-3" />
@@ -155,7 +155,7 @@ export default function HistoryView() {
                                 </div>
                             ))
                         ) : (
-                            <div className='text-center text-gray-500 p-8'>
+                            <div className='text-center text-muted-foreground p-8'>
                                 <p>No records found.</p>
                                 <p className='text-sm mt-2'>Upload a document to get started.</p>
                             </div>
@@ -168,7 +168,7 @@ export default function HistoryView() {
                 {selectedRecord ? (
                     <RecordDetails record={selectedRecord} />
                 ) : (
-                   !isLoadingRecords && <div className='flex h-full items-center justify-center text-gray-500'><p>Select a record to view its details.</p></div>
+                   !isLoadingRecords && <div className='flex h-full items-center justify-center text-muted-foreground'><p>Select a record to view its details.</p></div>
                 )}
             </div>
         </div>

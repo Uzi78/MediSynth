@@ -36,8 +36,8 @@ export default function PatientDetails({ patient, records, isLoading }: PatientD
     <Card className="h-full shadow-md">
        <div className="p-4 sm:p-6 space-y-6">
           <div>
-            <h2 className="text-2xl font-bold">{patient.name}</h2>
-            <p className="text-gray-600">{patient.age} years old, {patient.gender}</p>
+            <h2 className="text-2xl font-bold text-foreground">{patient.name}</h2>
+            <p className="text-muted-foreground">{patient.age} years old, {patient.gender}</p>
           </div>
        </div>
       <ConsolidatedReport records={records} />

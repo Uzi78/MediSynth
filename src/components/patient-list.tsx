@@ -24,7 +24,7 @@ export default function PatientList({ patients, isLoading, selectedPatientId, on
             {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)
             ) : patients.length === 0 ? (
-                <div className="text-center text-gray-500 py-10">
+                <div className="text-center text-muted-foreground py-10">
                     No patients found.
                 </div>
             ) : (
@@ -41,10 +41,10 @@ export default function PatientList({ patients, isLoading, selectedPatientId, on
                     )}
                 >
                     <div className="flex justify-between items-start">
-                    <p className="font-bold text-gray-800">{patient.name}</p>
+                    <p className="font-bold text-foreground">{patient.name}</p>
                     <Badge variant="secondary">{patient.id.substring(0, 6).toUpperCase()}</Badge>
                     </div>
-                    <div className="text-sm text-gray-600 mt-2 flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground mt-2 flex justify-between items-center">
                     <span>{patient.age}, {patient.gender}</span>
                     <div className="flex items-center gap-1">
                         <FileText className="w-4 h-4" />
