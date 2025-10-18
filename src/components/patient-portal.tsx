@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useRef, type DragEvent, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
-import { Upload, FileText, Loader, CheckCircle2 } from 'lucide-react';
+import { useState, useRef, type DragEvent, type ChangeEvent, type Dispatch, type SetStateAction, useEffect } from 'react';
+import { Upload } from 'lucide-react';
 import { Button } from './ui/button';
-import { Progress } from './ui/progress';
 import { cn } from '@/lib/utils';
 import type { Record as RecordType } from '@/lib/types';
 import RecordDisplay from './record-display';
@@ -11,8 +10,9 @@ import { extractMedicalData, ExtractMedicalDataOutput } from '@/ai/flows/extract
 import { generateConciseSummary } from '@/ai/flows/generate-concise-summary';
 import { ocrDocument } from '@/ai/flows/ocr-document';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useUser } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { useFirestore, useUser, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, query, orderBy } from 'firebase/firestore';
+import RecordHistoryList from './record-history-list';
 
 interface UploadedFile {
   id: string;
@@ -45,23 +45,32 @@ const readFileAsDataURL = (file: File): Promise<string> => {
 };
 
 export default function PatientPortal({ setPipelineStage }: PatientPortalProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { user } = useUser();
   const firestore = useFirestore();
+  const [selectedRecord, setSelectedRecord] = useState<RecordType | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const updateProgress = (fileId: string, stageIndex: number) => {
-    const stage = pipelineStages[stageIndex];
-    setUploadedFiles(currentFiles => 
-        currentFiles.map(f => f.id === fileId ? { ...f, progress: stage.progress, status: stage.status } : f)
-    );
-    // For simplicity, we only show overall pipeline progress for the first file.
-    if (uploadedFiles.findIndex(f => f.id === fileId) === 0) {
-      setPipelineStage(stage.stageIndex);
+
+  const recordsRef = useMemoFirebase(() => 
+    (user && firestore) ? collection(firestore, 'users', user.uid, 'patients', user.uid, 'records') : null
+  , [user, firestore]);
+
+  const recordsQuery = useMemoFirebase(() => 
+    recordsRef ? query(recordsRef, orderBy('date', 'desc')) : null
+  , [recordsRef]);
+
+  const { data: records, isLoading: isLoadingRecords } = useCollection<RecordType>(recordsQuery);
+
+  useEffect(() => {
+    // When records load, if no record is selected, select the most recent one.
+    if (!isLoadingRecords && records && records.length > 0 && !selectedRecord) {
+      setSelectedRecord(records[0]);
     }
-  };
+  }, [records, isLoadingRecords, selectedRecord]);
+
 
   const processFiles = async (files: FileList) => {
     if (!user || !firestore) {
@@ -73,34 +82,24 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
       return;
     }
 
-    const newFiles: UploadedFile[] = Array.from(files).map(file => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      progress: 0,
-      status: 'Queued...',
-      isProcessing: true,
-      processedRecord: null,
-    }));
-    setUploadedFiles(currentFiles => [...currentFiles, ...newFiles]);
+    setIsUploading(true);
+    setPipelineStage(0);
 
-    for (const newFile of newFiles) {
-        const associatedFile = Array.from(files).find(f => f.name === newFile.name);
-        if (!associatedFile) continue;
-
+    const fileUploadPromises = Array.from(files).map(async (file) => {
+        const fileId = crypto.randomUUID();
         try {
-            updateProgress(newFile.id, 0); // Uploading
-            const documentUri = await readFileAsDataURL(associatedFile);
+            const documentUri = await readFileAsDataURL(file);
+            setPipelineStage(1); // OCR
             
-            updateProgress(newFile.id, 1); // OCR
             const { rawText } = await ocrDocument({ documentUri });
+            setPipelineStage(2); // Extraction
             
-            updateProgress(newFile.id, 2); // Extraction
             const extractedData: ExtractMedicalDataOutput = await extractMedicalData({ documentText: rawText });
             
             const tempRecordForSummary = {
-              id: newFile.id,
+              id: fileId,
               date: new Date().toISOString(),
-              type: 'Uploaded Document',
+              type: file.name,
               status: 'processing' as const,
               rawDocument: rawText,
               extractedData: {
@@ -109,8 +108,8 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
                   labResults: extractedData.labResults,
               }
             };
+            setPipelineStage(3); // Summarization
             
-            updateProgress(newFile.id, 3); // Summarization
             const { summary } = await generateConciseSummary({ record: tempRecordForSummary });
             
             const finalRecord: Omit<RecordType, 'id'> = {
@@ -120,32 +119,31 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
               summary: summary,
               rawDocument: rawText,
               extractedData: tempRecordForSummary.extractedData,
-              patientId: user.uid, // Associate record with patient
+              patientId: user.uid, 
             };
 
-            // Save to Firestore
-            // We assume a patient document with the same ID as the user UID exists.
-            const recordsRef = collection(firestore, 'users', user.uid, 'patients', user.uid, 'records');
-            await addDoc(recordsRef, finalRecord);
-
-            updateProgress(newFile.id, 4); // Completion
-            setUploadedFiles(currentFiles => currentFiles.map(f => f.id === newFile.id ? { 
-                ...f, 
-                isProcessing: false, 
-                processedRecord: { ...finalRecord, id: newFile.id } as RecordType
-            } : f));
-
+            if (recordsRef) {
+               await addDoc(recordsRef, finalRecord);
+            }
+            
+            toast({
+                title: "Upload Successful",
+                description: `${file.name} has been processed and saved.`,
+            });
         } catch (error) {
-            console.error("Error processing file:", newFile.name, error);
+            console.error("Error processing file:", file.name, error);
             toast({
                 variant: "destructive",
-                title: `Processing Failed for ${newFile.name}`,
+                title: `Processing Failed for ${file.name}`,
                 description: "There was an error processing this document. Please try again.",
             });
-            setUploadedFiles(currentFiles => currentFiles.map(f => f.id === newFile.id ? { ...f, isProcessing: false, status: 'Failed' } : f));
-            setPipelineStage(-1);
         }
-    }
+    });
+
+    await Promise.all(fileUploadPromises);
+    setIsUploading(false);
+    setPipelineStage(4); // Completion
+    setTimeout(() => setPipelineStage(-1), 2000); // Reset pipeline viz after a delay
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -166,71 +164,64 @@ export default function PatientPortal({ setPipelineStage }: PatientPortalProps) 
   const handleDragEvents = (e: DragEvent<HTMLDivElement>, isEntering: boolean) => {
     e.preventDefault();
     e.stopPropagation();
-    if (uploadedFiles.some(f=>f.isProcessing)) return;
+    if (isUploading) return;
     setIsDragging(isEntering);
   };
   
-  const isAnyFileProcessing = uploadedFiles.some(f => f.isProcessing);
+  const handleSelectRecord = (recordId: string) => {
+    const record = records?.find(r => r.id === recordId) || null;
+    setSelectedRecord(record);
+  };
+  
+  const handleAddNew = () => {
+    setSelectedRecord(null);
+  };
+
 
   return (
-    <div className="p-6 space-y-6">
-      <div
-        className={cn(
-          'relative border-2 border-dashed rounded-lg p-12 text-center transition-colors duration-300',
-          isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50',
-          isAnyFileProcessing && 'cursor-not-allowed opacity-60'
-        )}
-        onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
-        onDragEnter={(e) => handleDragEvents(e, true)}
-        onDragLeave={(e) => handleDragEvents(e, false)}
-      >
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Upload className="w-12 h-12 text-gray-400" />
-          <h3 className="text-xl font-semibold">Upload Medical Records</h3>
-          <p className="text-gray-500">Drop PDF or Image files here</p>
-          <Button onClick={() => fileInputRef.current?.click()} disabled={isAnyFileProcessing}>Select Files</Button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={handleFileChange}
-            disabled={isAnyFileProcessing}
-            multiple
-          />
+    <div className="p-2 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[70vh]">
+        <div className="lg:col-span-4 xl:col-span-3">
+            <RecordHistoryList 
+                records={records || []}
+                selectedRecordId={selectedRecord?.id || null}
+                onSelectRecord={handleSelectRecord}
+                onAddNew={handleAddNew}
+                isLoading={isLoadingRecords}
+            />
         </div>
-      </div>
-
-      {uploadedFiles.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Processing Status</h3>
-          {uploadedFiles.map(file => (
-            <div key={file.id}>
-              <div className="p-4 border rounded-lg bg-white shadow-sm space-y-3 mb-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-6 h-6 text-primary flex-shrink-0" />
-                    <p className="font-medium truncate">{file.name}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 flex-shrink-0">
-                    <span>{file.status}</span>
-                    {file.isProcessing ? (
-                      <Loader className="w-4 h-4 animate-spin" />
-                    ) : file.progress === 100 ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                    ) : null}
-                  </div>
+        <div className="lg:col-span-8 xl:col-span-9">
+            {selectedRecord ? (
+                <RecordDisplay record={selectedRecord} />
+            ) : (
+                <div
+                    className={cn(
+                    'relative h-full border-2 border-dashed rounded-lg p-12 text-center transition-colors duration-300 flex flex-col items-center justify-center',
+                    isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50',
+                    isUploading && 'cursor-not-allowed opacity-60'
+                    )}
+                    onDrop={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnter={(e) => handleDragEvents(e, true)}
+                    onDragLeave={(e) => handleDragEvents(e, false)}
+                >
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                    <Upload className="w-12 h-12 text-gray-400" />
+                    <h3 className="text-xl font-semibold">Upload Medical Records</h3>
+                    <p className="text-gray-500">Drop PDF or Image files here</p>
+                    <Button onClick={() => fileInputRef.current?.click()} disabled={isUploading}>Select Files</Button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleFileChange}
+                        disabled={isUploading}
+                        multiple
+                    />
+                    </div>
                 </div>
-                {file.isProcessing && <Progress value={file.progress} />}
-              </div>
-              {file.processedRecord && (
-                  <RecordDisplay record={file.processedRecord} />
-              )}
-            </div>
-          ))}
+            )}
         </div>
-      )}
     </div>
   );
 }

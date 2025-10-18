@@ -7,6 +7,7 @@ import { AlertCircle, Pill } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Separator } from './ui/separator';
+import { ScrollArea } from './ui/scroll-area';
 
 interface RecordDisplayProps {
   record: Record;
@@ -28,6 +29,7 @@ const getStatusBadgeClass = (status: LabResult['status']) => {
 export default function RecordDisplay({ record }: RecordDisplayProps) {
   return (
       <Card className="h-full shadow-lg">
+        <ScrollArea className='h-[70vh]'>
         <div className="p-6 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <div>
@@ -94,6 +96,7 @@ export default function RecordDisplay({ record }: RecordDisplayProps) {
               </div>
           </div>
         </div>
+        </ScrollArea>
       </Card>
   );
 }
