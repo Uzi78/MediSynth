@@ -37,7 +37,49 @@ const ExtractMedicalDataOutputSchema = z.object({
 export type ExtractMedicalDataOutput = z.infer<typeof ExtractMedicalDataOutputSchema>;
 
 export async function extractMedicalData(input: ExtractMedicalDataInput): Promise<ExtractMedicalDataOutput> {
-  return extractMedicalDataFlow(input);
+  const trimmedText = input.documentText.trim();
+  
+  // Validation 1: Check for empty or minimal content
+  if (!trimmedText || trimmedText.length < 20) {
+    return {
+      diagnosis: [],
+      medications: [],
+      labResults: [],
+    };
+  }
+  
+  // Validation 2: Check for basic medical terminology
+  const hasMedicalContent = /\b(diagnosis|diagnosed|medication|prescription|rx|lab|test|result|patient|doctor|mg|ml|mcg|blood|dose|report)\b/i.test(trimmedText);
+  
+  if (!hasMedicalContent) {
+    return {
+      diagnosis: [],
+      medications: [],
+      labResults: [],
+    };
+  }
+  
+  // Call the AI flow
+  const result = await extractMedicalDataFlow(input);
+  
+  // Validation 3: Check for hallucination indicators
+  const hallucinationKeywords = ['example', 'sample', 'placeholder', 'demo', 'test data'];
+  const hasHallucinations = (
+    result.diagnosis.some(d => hallucinationKeywords.some(kw => d.toLowerCase().includes(kw))) ||
+    result.medications.some(m => hallucinationKeywords.some(kw => m.name.toLowerCase().includes(kw))) ||
+    result.labResults.some(l => hallucinationKeywords.some(kw => l.test.toLowerCase().includes(kw)))
+  );
+  
+  if (hasHallucinations) {
+    console.warn('Detected potential hallucinations in extracted data, returning empty result');
+    return {
+      diagnosis: [],
+      medications: [],
+      labResults: [],
+    };
+  }
+  
+  return result;
 }
 
 const extractMedicalDataPrompt = ai.definePrompt({
@@ -46,24 +88,33 @@ const extractMedicalDataPrompt = ai.definePrompt({
   output: {schema: ExtractMedicalDataOutputSchema},
   prompt: `You are an AI assistant that extracts structured medical data from raw text.
 
-  Analyze the following medical document text and extract the following information:
-  - Diagnoses
-  - Medications (name, dosage, frequency)
-  - Lab Results (test, value, range, status)
+CRITICAL RULES:
+1. ONLY extract information that is EXPLICITLY present in the document text
+2. DO NOT infer, assume, or generate any medical information
+3. DO NOT create example or placeholder data
+4. If the document is blank, empty, or contains no medical information, return empty arrays for ALL fields
+5. If you cannot find specific information (e.g., no medications listed), leave that array empty
 
-  Document Text:
-  {{{documentText}}}
+Document Text:
+{{{documentText}}}
 
-  IMPORTANT: If the document text is empty or contains no relevant medical information, you MUST return empty arrays for all fields. Do not hallucinate data.
+Extract the following information ONLY if explicitly present:
+- Diagnoses
+- Medications (name, dosage, frequency)
+- Lab Results (test, value, range, status)
 
-  Return the extracted information in JSON format. The JSON should have the following keys:
-  - diagnosis: A list of diagnoses.
-  - medications: A list of medications, where each medication has a name, dosage, and frequency.
-  - labResults: A list of lab results, where each result has a test, value, range, and status.
-  
-  If a field is not present in the document, return an empty array or object for it.
-  Follow the schema descriptions for each of the fields.
-  `,
+Return the extracted information in JSON format with these keys:
+- diagnosis: Array of diagnosis strings (empty if none found)
+- medications: Array of medication objects (empty if none found)
+- labResults: Array of lab result objects (empty if none found)
+
+If the document text is empty, contains only whitespace, or has no medical content, you MUST return:
+{
+  "diagnosis": [],
+  "medications": [],
+  "labResults": []
+}
+`,
 });
 
 const extractMedicalDataFlow = ai.defineFlow(
